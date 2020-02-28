@@ -211,7 +211,7 @@ fn main() {
             let secs = elapsed.as_secs();
 
             let time = format!(
-                "{minutes:0>2}:{seconds:0>2}",
+                "{minutes}:{seconds:0>2}",
                 minutes = (secs / 60) % 60,
                 seconds = secs % 60,
             );
