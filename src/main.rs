@@ -149,7 +149,7 @@ fn print_all(stdout: &mut Stdout, offset_x: &u16, offset_y: &u16, tiles: &Tiles)
 fn print_score(stdout: &mut Stdout, tiles: &Tiles) {
     write!(
         stdout,
-        "{}total total mines: {mines}\r\nflagged: {flagged}",
+        "{}total mines: {mines}\r\nflagged: {flagged}",
         termion::cursor::Goto(1, 1),
         mines = *MINES,
         flagged = tiles.iter().fold(0, |num, curr| {
@@ -195,6 +195,7 @@ fn main() {
     let elapsed = Instant::now();
     let stdout = Arc::new(Mutex::new(stdout));
     let thread_stdout = stdout.clone();
+    let out = stdout.clone();
     thread::spawn(move || loop {
         let start = Instant::now();
         if let Ok(ended) = cloned_ended.try_lock() {
@@ -205,13 +206,17 @@ fn main() {
 
         if let Ok(lock) = thread_stdout.try_lock() {
             let mut stdout = lock;
-            write!(
-                stdout,
-                "{}elapsed: {}",
-                termion::cursor::Goto(1, 3),
-                elapsed.elapsed().as_secs()
-            )
-            .unwrap();
+            let elapsed = elapsed.elapsed();
+
+            let secs = elapsed.as_secs();
+
+            let time = format!(
+                "{minutes:0>2}:{seconds:0>2}",
+                minutes = (secs / 60) % 60,
+                seconds = secs % 60,
+            );
+
+            write!(stdout, "{}elapsed: {}", termion::cursor::Goto(1, 3), time).unwrap();
 
             stdout.flush().unwrap();
         }
@@ -348,15 +353,12 @@ fn main() {
 
                         stdout.flush().unwrap();
                     }
-
-                    // write!(stdout, "{}{:?}", termion::cursor::Goto(1, 2), elem,).unwrap();
                 }
                 _ => {}
             },
             _ => {}
         }
-
-        if let Ok(lock) = stdout.try_lock() {
+        if let Ok(lock) = out.try_lock() {
             let mut stdout = lock;
             stdout.flush().unwrap();
         }
