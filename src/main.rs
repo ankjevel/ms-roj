@@ -142,7 +142,7 @@ fn end(stdout: &mut Stdout, offset_x: &u16, offset_y: &u16, tiles: &Tiles) {
 
 fn print_all(stdout: &mut Stdout, offset_x: &u16, offset_y: &u16, tiles: &Tiles) {
     for (tile, block) in tiles {
-        Tile::print(stdout, &tile, &block, &offset_x, &offset_y, true)
+        tile.print(stdout, &block, &offset_x, &offset_y, true)
     }
 }
 
@@ -281,14 +281,7 @@ fn main() {
 
                                 if let Ok(lock) = stdout.try_lock() {
                                     let mut stdout = lock;
-                                    Tile::print(
-                                        &mut stdout,
-                                        &tile,
-                                        &block,
-                                        &offset_x,
-                                        &offset_y,
-                                        false,
-                                    );
+                                    tile.print(&mut stdout, &block, &offset_x, &offset_y, false);
                                 }
 
                                 continue;
@@ -308,9 +301,8 @@ fn main() {
 
                                     if let Ok(lock) = stdout.try_lock() {
                                         let mut stdout = lock;
-                                        Tile::print(
+                                        tile.print(
                                             &mut stdout,
-                                            &tile,
                                             &block,
                                             &offset_x,
                                             &offset_y,
@@ -323,7 +315,7 @@ fn main() {
                             block.is_flagged = !block.is_flagged;
                             if let Ok(lock) = stdout.try_lock() {
                                 let mut stdout = lock;
-                                Tile::print(&mut stdout, &tile, &block, &offset_x, &offset_y, false)
+                                tile.print(&mut stdout, &block, &offset_x, &offset_y, false)
                             }
                         }
                         _ => continue,

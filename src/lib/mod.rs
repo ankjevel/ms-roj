@@ -93,7 +93,7 @@ pub fn gen_field(stdout: &mut Stdout, offset_x: &u16, offset_y: &u16) -> Tiles {
     }
 
     for (tile, block) in &tiles {
-        Tile::print(stdout, &tile, &block, offset_x, offset_y, false);
+        tile.print(stdout, &block, offset_x, offset_y, false);
     }
 
     tiles

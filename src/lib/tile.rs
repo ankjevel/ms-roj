@@ -17,8 +17,8 @@ pub struct Tile {
 
 impl Tile {
     pub fn print(
+        &self,
         stdout: &mut Stdout,
-        tile: &Tile,
         block: &Block,
         offset_x: &u16,
         offset_y: &u16,
@@ -31,14 +31,14 @@ impl Tile {
         };
 
         vec![
-            (tile.x, tile.y, &wall),
-            (tile.x + 1, tile.y, &wall),
-            (tile.x + 2, tile.y, &wall),
-            (tile.x, tile.y + 1, &wall),
-            (tile.x + 2, tile.y + 1, &wall),
-            (tile.x, tile.y + 2, &wall),
-            (tile.x + 1, tile.y + 2, &wall),
-            (tile.x + 2, tile.y + 2, &wall),
+            (self.x, self.y, &wall),
+            (self.x + 1, self.y, &wall),
+            (self.x + 2, self.y, &wall),
+            (self.x, self.y + 1, &wall),
+            (self.x + 2, self.y + 1, &wall),
+            (self.x, self.y + 2, &wall),
+            (self.x + 1, self.y + 2, &wall),
+            (self.x + 2, self.y + 2, &wall),
         ]
         .iter()
         .for_each(|(x, y, tile)| {
@@ -51,7 +51,7 @@ impl Tile {
             .unwrap();
         });
 
-        let (x, y) = (tile.x + 1 + offset_x, tile.y + 1 + offset_y);
+        let (x, y) = (self.x + 1 + offset_x, self.y + 1 + offset_y);
 
         write!(
             stdout,
