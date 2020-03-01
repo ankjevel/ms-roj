@@ -6,7 +6,7 @@ use gtk::prelude::*;
 use std::{cell::RefCell, rc::Rc};
 
 pub struct Application {
-    pub app: Rc<Widget>,
+    pub widget: Rc<Widget>,
     game: Rc<RefCell<Game>>,
 }
 
@@ -16,44 +16,99 @@ impl Application {
             glib::MainContext::channel(glib::PRIORITY_DEFAULT);
 
         let app = Application {
-            app: Rc::new(build_ui(app)),
-            game: Rc::new(RefCell::new(Game { mines: Vec::new() })),
+            widget: Rc::new(build_ui(app)),
+            game: Rc::new(RefCell::new(Game::new())),
         };
 
         app.update_main_ui_thread(rx);
         app.setup_labels_and_reset(tx.clone());
 
-        app.reset();
+        app.bind_clock(tx.clone());
 
         app.bind_click_events(tx.clone())
     }
 
-    fn reset(&self) {
+    fn bind_clock(&self, tx: glib::Sender<Message>) {
         let game = self.game.clone();
+        let tx = tx.clone();
 
-        game.borrow_mut().new_mines();
+        let tick = move || {
+            let game = game.borrow();
+
+            if game.active {
+                let elapsed = game.time.elapsed();
+
+                let secs = elapsed.as_secs();
+
+                let time = format!(
+                    "{minutes}:{seconds:0>2}",
+                    minutes = (secs / 60) % 60,
+                    seconds = secs % 60,
+                )
+                .to_string();
+
+                tx.send(Message::SetTime(time)).expect("could not set time");
+            }
+
+            glib::Continue(true)
+        };
+
+        gtk::timeout_add(200, tick);
     }
 
     fn update_main_ui_thread(&self, rx: glib::Receiver<Message>) {
-        let app = self.app.clone();
+        let widget = self.widget.clone();
+        let game = self.game.clone();
         rx.attach(None, move |msg| {
             match msg {
                 Message::Reset => {
-                    app.reset.set_label("🙂");
-                    app.time.set_label("000");
-                    app.mines_left.set_label(&format!("{}", *MINES));
+                    widget.reset.set_label("🙂");
+                    widget.time.set_label("0:00");
+                    widget.mines_left.set_label(&format!("{}", *MINES));
+                    game.borrow_mut().new_mines();
+
+                    widget.mines.iter().for_each(|(position, block)| {
+                        block.0.set_label(" ");
+                        block.0.set_can_focus(true);
+                        block.0.set_relief(gtk::ReliefStyle::Normal);
+                    });
                 }
                 Message::UpdateButton(position, block) => {
-                    app.time.set_label(&format!("{:?}", position));
-
                     let button = block.0;
+                    let mut game = game.borrow_mut();
+
+                    if game.ended {
+                        return glib::Continue(true);
+                    }
 
                     button.set_relief(gtk::ReliefStyle::None);
-                    button.set_label("");
-                    button.set_can_focus(false);
+
+                    if !game.active {
+                        game.start_timer();
+                    }
+
+                    if let Some(field) = game.field.get_mut(&position) {
+                        field.is_clicked = true;
+
+                        let (label, class) = if field.is_mine {
+                            ("🔥".to_string(), "mine")
+                        } else if field.mines_around == 0 {
+                            (" ".to_string(), "empty")
+                        } else {
+                            (field.mines_around.to_string(), "close")
+                        };
+
+                        if field.is_mine {
+                            game.active = false;
+                            game.ended = true;
+                        }
+
+                        button.set_label(&label);
+                        button.set_can_focus(false);
+                    }
                 }
-                Message::SetTime(time) => app.time.set_label(""),
-                Message::SetMines(mines) => app.mines_left.set_label(&mines.to_string()),
+                Message::SetTime(time) => widget.time.set_label(&time),
+                Message::SetMines(mines) => widget.mines_left.set_label(&mines.to_string()),
                 _ => {}
             }
             glib::Continue(true)
@@ -61,17 +116,18 @@ impl Application {
     }
 
     fn bind_click_events(self, tx: glib::Sender<Message>) -> Self {
-        let app = self.app.clone();
+        let widget = self.widget.clone();
         let mine_event = tx.clone();
-        let mines = app.mines.clone();
+        let mines = widget.mines.clone();
 
         mines.iter().for_each(|(position, block)| {
-            let event = tx.clone();
+            let sender = tx.clone();
 
             let msg = Message::UpdateButton(position.clone(), block.clone());
 
-            block.0.connect_clicked(move |_| {
-                event.send(msg.clone()).expect("couldn't send");
+            block.0.connect_clicked(move |e| {
+                println!("event, {:?}", e);
+                sender.send(msg.clone()).expect("couldn't send");
             });
         });
 
@@ -79,13 +135,14 @@ impl Application {
     }
 
     fn setup_labels_and_reset(&self, tx: glib::Sender<Message>) {
-        let app = self.app.clone();
+        let widget = self.widget.clone();
 
-        app.time.set_label("000");
-        app.mines_left.set_label(&format!("{}", *MINES));
-        app.reset.set_label("🙂");
+        widget.time.set_label("0:00");
+        widget.mines_left.set_label(&format!("{}", *MINES));
+        widget.reset.set_label("🙂");
 
-        app.reset
+        widget
+            .reset
             .connect_clicked(move |_| tx.send(Message::Reset).expect("reset error"));
     }
 }
