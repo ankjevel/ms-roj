@@ -5,7 +5,7 @@ use crate::{
 use gtk::prelude::*;
 use std::{cell::RefCell, rc::Rc};
 
-struct Application {
+pub struct Application {
     pub app: Rc<Widget>,
     game: Rc<RefCell<Game>>,
 }
