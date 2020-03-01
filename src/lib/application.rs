@@ -1,37 +1,9 @@
-#![cfg_attr(
-    not(feature = "gtk_3_10"),
-    allow(unused_variables, unused_mut, dead_code)
-)]
-
-#[macro_use]
-extern crate lazy_static;
-
-extern crate gio;
-extern crate glib;
-extern crate gtk;
-extern crate rand;
-
-lazy_static! {
-    static ref COLS: u16 = 9;
-    static ref ROWS: u16 = 9;
-    static ref MINES: u16 = 10;
-}
-
-mod lib;
-
-use gio::prelude::*;
-use gtk::{
-    prelude::*,
-    {ApplicationWindow, Builder, Button},
+use crate::{
+    lib::{game::Game, message::Message, ui::build_ui, widget::Widget},
+    MINES,
 };
-use lib::{
-    block::Block, gen_mines, message::Message, position::Position, ui::build_ui, widget::Widget,
-};
-use std::{cell::RefCell, collections::HashMap, env::args, rc::Rc};
-
-struct Game {
-    mines: Vec<Position>,
-}
+use gtk::prelude::*;
+use std::{cell::RefCell, rc::Rc};
 
 struct Application {
     pub app: Rc<Widget>,
@@ -59,7 +31,7 @@ impl Application {
     fn reset(&self) {
         let game = self.game.clone();
 
-        game.borrow_mut().mines = gen_mines();
+        game.borrow_mut().new_mines();
     }
 
     fn update_main_ui_thread(&self, rx: glib::Receiver<Message>) {
@@ -116,26 +88,4 @@ impl Application {
         app.reset
             .connect_clicked(move |_| tx.send(Message::Reset).expect("reset error"));
     }
-}
-
-fn main() {
-    let application =
-        gtk::Application::new(Some("com.github.Iteam13337.msroj"), Default::default())
-            .expect("Initialization failed...");
-
-    application.connect_startup(|app| {
-        let application = Application::new(app);
-        let application_container = RefCell::new(Some(application));
-        app.connect_shutdown(move |_| {
-            let application = application_container
-                .borrow_mut()
-                .take()
-                .expect("Shutdown called multiple times");
-            drop(application);
-        });
-    });
-
-    application.connect_activate(|_| {});
-
-    application.run(&args().collect::<Vec<_>>());
 }
