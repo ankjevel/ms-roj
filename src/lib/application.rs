@@ -227,11 +227,11 @@ impl Application {
                     let mut empty = false;
                     let mut game_ended = false;
 
-                    {
+                    'mut_closure: {
                         let mut game = game.borrow_mut();
 
                         if game.ended {
-                            return glib::Continue(true);
+                            break 'mut_closure;
                         }
 
                         button.set_relief(gtk::ReliefStyle::None);
@@ -243,7 +243,7 @@ impl Application {
                         let field = game.field.get_mut(&position);
 
                         if field.is_none() {
-                            return glib::Continue(true);
+                            break 'mut_closure;
                         }
 
                         let mut field = field.unwrap();
@@ -281,7 +281,7 @@ impl Application {
 
                             widget.mines_left.set_label(&mines.to_string());
 
-                            return glib::Continue(true);
+                            break 'mut_closure;
                         }
 
                         field.is_clicked = true;
