@@ -1,3 +1,4 @@
+#![feature(label_break_value)]
 #![cfg_attr(
     not(feature = "gtk_3_10"),
     allow(unused_variables, unused_mut, dead_code)

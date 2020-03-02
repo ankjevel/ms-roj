@@ -36,10 +36,12 @@ pub fn build_ui<'a>(application: &'a Application) -> Widget {
 
     window.show_all();
 
-    let css = include_bytes!("../../resources/style.css");
     let screen = window.get_screen().unwrap();
     let style = CssProvider::new();
-    style.load_from_data(css).unwrap();
+
+    style
+        .load_from_data(include_bytes!("../../resources/style.css"))
+        .unwrap();
     StyleContext::add_provider_for_screen(&screen, &style, gtk::STYLE_PROVIDER_PRIORITY_USER);
 
     Widget {

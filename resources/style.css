@@ -1,3 +1,28 @@
-.mine.clicked {
-  background: yellow;
+.btn_empty,
+.btn_close {
+  background: none;
+}
+
+
+.btn_mine {
+  background: #1D282D;
+}
+
+.btn_mine_clicked {
+  background: #991A18;
+}
+
+.btn_close {
+}
+
+.btn_close_one {
+  color: #2A82AE;
+}
+
+.btn_close_two {
+  color: #4EB02C;
+}
+
+.btn_close_multiple {
+  color: #991A18;
 }

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=MS Röj
+GenericName=MS Röj
+Comment=
+Categories=GTK
+# Icon=com.github.Iteam13337.ms-roj
+Exec=com.github.Iteam13337.ms-roj
+Terminal=false
+Type=Application

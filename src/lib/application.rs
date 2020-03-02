@@ -82,13 +82,16 @@ impl Application {
 
             let mut game = flood_game.borrow_mut();
             for position in positions {
-                let (mut label, mut class) = (" ".to_string(), "empty".to_string());
+                let (mut label, mut class_names) = (" ".to_string(), vec![]);
                 if let Some(field) = game.field.get_mut(&position) {
                     field.is_clicked = true;
 
                     if field.mines_around != 0 {
                         label = field.mines_around.to_string();
-                        class = "close".to_string();
+                        class_names.push("btn_close".to_string());
+                        class_names.push(field.mines_around_class_name());
+                    } else {
+                        class_names.push("btn_empty".to_string());
                     }
                 }
 
@@ -98,13 +101,85 @@ impl Application {
                     button.set_relief(gtk::ReliefStyle::None);
                     button.set_label(&label);
                     button.set_can_focus(false);
+                    let ctx = button.get_style_context();
+
+                    for class_name in ctx.list_classes() {
+                        if class_name.starts_with("btn_") {
+                            ctx.remove_class(&class_name);
+                        }
+                    }
+
+                    for class in class_names {
+                        ctx.add_class(&class);
+                    }
                 }
+            }
+        };
+
+        let show_all_mines_widget = self.widget.clone();
+        let show_all_mines_game = self.game.clone();
+        let show_all_mines = move || {
+            let game = show_all_mines_game.borrow();
+
+            for mine in &game.mines {
+                let id = format!("mine_{}{}", mine.0, mine.1);
+                let button: Option<Button> = show_all_mines_widget.builder.get_object(&id);
+
+                if let Some(button) = button {
+                    if let Some(label) = button.get_label() {
+                        if label == "🔥" {
+                            continue;
+                        }
+                    }
+
+                    button.set_relief(gtk::ReliefStyle::None);
+                    button.set_label(&"💣");
+                    button.set_can_focus(false);
+                    let ctx = button.get_style_context();
+                    ctx.add_class(&"btn_mine");
+                }
+            }
+
+            show_all_mines_widget.reset.set_label(&"👻");
+        };
+
+        let check_if_completed_widget = self.widget.clone();
+        let check_if_completed_game = self.game.clone();
+        let check_if_completed = move || {
+            let check_if_completed_game = check_if_completed_game.clone();
+            let widget = check_if_completed_widget.clone();
+            let completed: bool;
+
+            {
+                let game = check_if_completed_game.borrow();
+                let mines = game
+                    .field
+                    .iter()
+                    .filter_map(|(position, field)| {
+                        if game.mines.contains(&position) && !field.is_clicked && field.is_flagged {
+                            Some(position)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<Vec<&Position>>();
+                completed = mines.len() == *MINES as usize;
+            }
+
+            if completed {
+                let mut game = check_if_completed_game.borrow_mut();
+                game.ended = true;
+                game.active = false;
+                widget.reset.set_label("🎊");
+                widget.mines_left.set_label(&"0");
+                widget.mines.iter().for_each(|(position, block)| {
+                    block.0.set_can_focus(false);
+                });
             }
         };
 
         let widget = self.widget.clone();
         let game = self.game.clone();
-
         rx.attach(None, move |msg| {
             match msg {
                 Message::Reset => {
@@ -117,11 +192,29 @@ impl Application {
                         block.0.set_label(" ");
                         block.0.set_can_focus(true);
                         block.0.set_relief(gtk::ReliefStyle::Normal);
+                        let ctx = block.0.get_style_context();
+
+                        for class_name in ctx.list_classes() {
+                            if class_name.starts_with("btn_") {
+                                ctx.remove_class(&class_name);
+                            }
+                        }
+                    });
+                }
+                Message::End => {
+                    let mut game = game.borrow_mut();
+                    game.ended = true;
+                    game.active = false;
+                    widget.reset.set_label("🎊");
+                    widget.mines_left.set_label(&"0");
+                    widget.mines.iter().for_each(|(position, block)| {
+                        block.0.set_can_focus(false);
                     });
                 }
                 Message::UpdateButton(position, block, flag) => {
                     let button = block.0;
                     let mut empty = false;
+                    let mut game_ended = false;
 
                     {
                         let mut game = game.borrow_mut();
@@ -136,52 +229,108 @@ impl Application {
                             game.start_timer();
                         }
 
-                        if let Some(field) = game.field.get_mut(&position) {
-                            if flag && field.is_clicked == false {
-                                field.is_flagged = !field.is_flagged;
+                        let field = game.field.get_mut(&position);
 
-                                let (label, class) = if field.is_flagged {
-                                    ("🏴".to_string(), "flag")
-                                } else {
-                                    (" ".to_string(), "")
-                                };
+                        if field.is_none() {
+                            return glib::Continue(true);
+                        }
 
-                                button.set_relief(gtk::ReliefStyle::Normal);
-                                button.set_label(&label);
+                        let mut field = field.unwrap();
 
-                                return glib::Continue(true);
-                            }
+                        if flag && field.is_clicked == false {
+                            field.is_flagged = !field.is_flagged;
 
-                            field.is_clicked = true;
-
-                            let (label, class) = if field.is_mine {
-                                ("🔥".to_string(), "mine")
-                            } else if field.mines_around == 0 {
-                                (" ".to_string(), "empty")
+                            let (label, class, add) = if field.is_flagged {
+                                ("🏴", "btn_flag", false)
                             } else {
-                                (field.mines_around.to_string(), "close")
+                                (" ", "", true)
                             };
 
-                            if field.is_mine {
-                                game.active = false;
-                                game.ended = true;
+                            button.set_relief(gtk::ReliefStyle::Normal);
+                            button.set_label(&label.to_string());
+
+                            let ctx = button.get_style_context();
+
+                            for class_name in ctx.list_classes() {
+                                if class_name.starts_with("btn_") {
+                                    ctx.remove_class(&class_name);
+                                }
                             }
 
-                            button.set_label(&label);
-                            button.set_can_focus(false);
+                            ctx.add_class(&class);
 
-                            if class == "empty" {
-                                empty = true;
+                            let mut mines: i16 =
+                                widget.mines_left.get_label().unwrap().parse().unwrap_or(0);
+
+                            if add {
+                                mines += 1;
+                            } else {
+                                mines -= 1;
                             }
+
+                            widget.mines_left.set_label(&mines.to_string());
+
+                            return glib::Continue(true);
+                        }
+
+                        field.is_clicked = true;
+
+                        let (label, class_names) = if field.is_mine {
+                            (
+                                "🔥".to_string(),
+                                vec!["btn_mine", "btn_mine_clicked"]
+                                    .iter()
+                                    .map(|str| str.to_string())
+                                    .collect(),
+                            )
+                        } else if field.mines_around == 0 {
+                            (" ".to_string(), vec!["btn_empty".to_string()])
+                        } else {
+                            (
+                                field.mines_around.to_string(),
+                                vec!["btn_close".to_string(), field.mines_around_class_name()],
+                            )
+                        };
+
+                        if field.is_mine {
+                            game.active = false;
+                            game.ended = true;
+                        }
+
+                        button.set_label(&label);
+                        button.set_can_focus(false);
+
+                        let ctx = button.get_style_context();
+
+                        for class_name in ctx.list_classes() {
+                            if class_name.starts_with("btn_") {
+                                ctx.remove_class(&class_name);
+                            }
+                        }
+
+                        for class in &class_names {
+                            ctx.add_class(class);
+                        }
+
+                        if game.ended {
+                            game_ended = true;
+                        }
+
+                        if class_names.contains(&"btn_empty".to_string()) {
+                            empty = true;
                         }
                     }
 
                     if empty {
                         flood(&position);
+                    } else if game_ended {
+                        show_all_mines();
+                    } else {
+                        check_if_completed();
                     }
                 }
                 Message::SetTime(time) => widget.time.set_label(&time),
-                Message::SetMines(mines) => widget.mines_left.set_label(&mines.to_string()),
+                Message::SetMines(mines) => widget.mines_left.set_label(&mines),
                 _ => {}
             }
             glib::Continue(true)

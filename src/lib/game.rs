@@ -6,22 +6,6 @@ use std::{collections::HashMap, time::Instant};
 
 pub type FieldMap = HashMap<Position, Field>;
 
-#[derive(Debug, Copy, Clone)]
-pub struct Field {
-    pub is_mine: bool,
-    pub is_clicked: bool,
-    pub is_flagged: bool,
-    pub mines_around: u16,
-}
-
-pub struct Game {
-    pub mines: Vec<Position>,
-    pub field: FieldMap,
-    pub active: bool,
-    pub ended: bool,
-    pub time: Instant,
-}
-
 fn gen() -> (Vec<Position>, FieldMap) {
     let mines = gen_mines();
 
@@ -44,6 +28,36 @@ fn gen() -> (Vec<Position>, FieldMap) {
     }
 
     (mines, field)
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct Field {
+    pub is_mine: bool,
+    pub is_clicked: bool,
+    pub is_flagged: bool,
+    pub mines_around: u16,
+}
+
+impl Field {
+    pub fn mines_around_class_name(&self) -> String {
+        format!(
+            "btn_close_{}",
+            match self.mines_around {
+                1 => "one",
+                2 => "two",
+                _ => "multiple",
+            }
+        )
+        .to_string()
+    }
+}
+
+pub struct Game {
+    pub mines: Vec<Position>,
+    pub field: FieldMap,
+    pub active: bool,
+    pub ended: bool,
+    pub time: Instant,
 }
 
 impl Game {
