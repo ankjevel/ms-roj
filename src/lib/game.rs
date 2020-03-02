@@ -4,6 +4,9 @@ use crate::{
 };
 use std::{collections::HashMap, time::Instant};
 
+pub type FieldMap = HashMap<Position, Field>;
+
+#[derive(Debug, Copy, Clone)]
 pub struct Field {
     pub is_mine: bool,
     pub is_clicked: bool,
@@ -13,13 +16,13 @@ pub struct Field {
 
 pub struct Game {
     pub mines: Vec<Position>,
-    pub field: HashMap<Position, Field>,
+    pub field: FieldMap,
     pub active: bool,
     pub ended: bool,
     pub time: Instant,
 }
 
-fn gen() -> (Vec<Position>, HashMap<Position, Field>) {
+fn gen() -> (Vec<Position>, FieldMap) {
     let mines = gen_mines();
 
     let mut field = HashMap::new();

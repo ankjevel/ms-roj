@@ -43,6 +43,7 @@ pub fn build_ui<'a>(application: &'a Application) -> Widget {
     StyleContext::add_provider_for_screen(&screen, &style, gtk::STYLE_PROVIDER_PRIORITY_USER);
 
     Widget {
+        builder,
         mines: Rc::new(mines),
         window,
         mines_left,

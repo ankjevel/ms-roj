@@ -1,9 +1,12 @@
 use crate::{
-    lib::{game::Game, message::Message, ui::build_ui, widget::Widget},
+    lib::{
+        game::Game, get_tiles_around, message::Message, position::Position, ui::build_ui,
+        widget::Widget,
+    },
     MINES,
 };
 // use glib::clone;
-use gtk::prelude::*;
+use gtk::{prelude::*, Button};
 use std::{cell::RefCell, rc::Rc};
 
 pub struct Application {
@@ -58,8 +61,50 @@ impl Application {
     }
 
     fn update_main_ui_thread(&self, rx: glib::Receiver<Message>) {
+        let flood_widget = self.widget.clone();
+        let flood_game = self.game.clone();
+        let flood = move |position: &Position| {
+            let mut positions: Vec<Position> = Vec::new();
+
+            {
+                let game = flood_game.borrow();
+                if let Some(field) = game.field.get(&position) {
+                    let field_ref = game.field.to_owned();
+                    let positions = get_tiles_around(&position, &field, &field_ref)
+                        .iter()
+                        .for_each(|(position, _)| positions.push(position.to_owned()));
+                }
+            }
+
+            if positions.is_empty() {
+                return;
+            }
+
+            let mut game = flood_game.borrow_mut();
+            for position in positions {
+                let (mut label, mut class) = (" ".to_string(), "empty".to_string());
+                if let Some(field) = game.field.get_mut(&position) {
+                    field.is_clicked = true;
+
+                    if field.mines_around != 0 {
+                        label = field.mines_around.to_string();
+                        class = "close".to_string();
+                    }
+                }
+
+                let id = format!("mine_{}{}", position.0, position.1);
+                let button: Option<Button> = flood_widget.builder.get_object(&id);
+                if let Some(button) = button {
+                    button.set_relief(gtk::ReliefStyle::None);
+                    button.set_label(&label);
+                    button.set_can_focus(false);
+                }
+            }
+        };
+
         let widget = self.widget.clone();
         let game = self.game.clone();
+
         rx.attach(None, move |msg| {
             match msg {
                 Message::Reset => {
@@ -76,51 +121,63 @@ impl Application {
                 }
                 Message::UpdateButton(position, block, flag) => {
                     let button = block.0;
-                    let mut game = game.borrow_mut();
+                    let mut empty = false;
 
-                    if game.ended {
-                        return glib::Continue(true);
-                    }
+                    {
+                        let mut game = game.borrow_mut();
 
-                    button.set_relief(gtk::ReliefStyle::None);
-
-                    if !game.active {
-                        game.start_timer();
-                    }
-
-                    if let Some(field) = game.field.get_mut(&position) {
-                        if flag && field.is_clicked == false {
-                            field.is_flagged = !field.is_flagged;
-
-                            let (label, class) = if field.is_flagged {
-                                ("🏴".to_string(), "flag")
-                            } else {
-                                (" ".to_string(), "")
-                            };
-
-                            button.set_relief(gtk::ReliefStyle::Normal);
-                            button.set_label(&label);
-
+                        if game.ended {
                             return glib::Continue(true);
                         }
 
-                        field.is_clicked = true;
+                        button.set_relief(gtk::ReliefStyle::None);
 
-                        let (label, class) = if field.is_mine {
-                            ("🔥".to_string(), "mine")
-                        } else if field.mines_around == 0 {
-                            (" ".to_string(), "empty")
-                        } else {
-                            (field.mines_around.to_string(), "close")
-                        };
-
-                        if field.is_mine {
-                            game.active = false;
-                            game.ended = true;
+                        if !game.active {
+                            game.start_timer();
                         }
 
-                        button.set_label(&label);
-                        button.set_can_focus(false);
+                        if let Some(field) = game.field.get_mut(&position) {
+                            if flag && field.is_clicked == false {
+                                field.is_flagged = !field.is_flagged;
+
+                                let (label, class) = if field.is_flagged {
+                                    ("🏴".to_string(), "flag")
+                                } else {
+                                    (" ".to_string(), "")
+                                };
+
+                                button.set_relief(gtk::ReliefStyle::Normal);
+                                button.set_label(&label);
+
+                                return glib::Continue(true);
+                            }
+
+                            field.is_clicked = true;
+
+                            let (label, class) = if field.is_mine {
+                                ("🔥".to_string(), "mine")
+                            } else if field.mines_around == 0 {
+                                (" ".to_string(), "empty")
+                            } else {
+                                (field.mines_around.to_string(), "close")
+                            };
+
+                            if field.is_mine {
+                                game.active = false;
+                                game.ended = true;
+                            }
+
+                            button.set_label(&label);
+                            button.set_can_focus(false);
+
+                            if class == "empty" {
+                                empty = true;
+                            }
+                        }
+                    }
+
+                    if empty {
+                        flood(&position);
                     }
                 }
                 Message::SetTime(time) => widget.time.set_label(&time),

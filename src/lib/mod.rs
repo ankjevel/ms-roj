@@ -9,7 +9,16 @@ pub mod position;
 pub mod ui;
 pub mod widget;
 
-use crate::{lib::position::Position, rand::Rng, COLS, MINES, ROWS};
+use crate::{
+    lib::{
+        game::{Field, FieldMap},
+        position::Position,
+    },
+    rand::Rng,
+    COLS, MINES, ROWS,
+};
+
+use std::collections::HashSet;
 
 pub fn gen_mines() -> Vec<Position> {
     let mine = || -> Position {
@@ -30,58 +39,91 @@ pub fn gen_mines() -> Vec<Position> {
     mines
 }
 
-// pub fn gen_field(stdout: &mut Stdout, offset_x: &u16, offset_y: &u16) -> Tiles {
-//     let mines = gen_mines();
+fn get_adjecent(
+    pos: &Position,
+    field: &FieldMap,
+    collected: &HashSet<Position>,
+) -> Vec<(Position, Field)> {
+    let mut vec: Vec<(isize, isize)> = vec![(1, 0), (0, 1)];
 
-//     let mut tiles: Tiles = BTreeMap::new();
+    if pos.0 > 0 {
+        vec.push((-1, 0));
+    }
 
-//     for x in 0..*ROWS {
-//         for y in 0..*COLS {
-//             let pos = (x, y);
-//             let is_mine = mines.contains(&pos);
-//             tiles.insert(
-//                 Tile::new(&x, &y),
-//                 Block {
-//                     is_mine,
-//                     is_clicked: false,
-//                     is_flagged: false,
-//                     mines_around: around(&pos, &mines),
-//                 },
-//             );
-//         }
-//     }
+    if pos.1 > 0 {
+        vec.push((0, -1));
+    }
 
-//     for (tile, block) in &tiles {
-//         tile.print(stdout, &block, offset_x, offset_y, false);
-//     }
+    vec.into_iter()
+        .filter_map(|(x, y)| {
+            let (x, y) = ((pos.0 as isize + x) as u16, (pos.1 as isize + y) as u16);
+            let tile = Position(x, y);
+            let res = field.get(&tile);
 
-//     tiles
-// }
+            if res.is_none() {
+                None
+            } else {
+                let tile = tile.to_owned();
+                let block = res.unwrap().to_owned();
 
-// fn around(pos: &(u16, u16), mines: &Vec<(u16, u16)>) -> u16 {
-//     let (x, y) = pos;
-//     let mut points = vec![(*x, *y), (x + 1, *y), (*x, y + 1), (x + 1, y + 1)];
+                if collected.contains(&tile) {
+                    None
+                } else {
+                    Some((tile, block))
+                }
+            }
+        })
+        .collect()
+}
 
-//     let (pos_x, pos_y) = (x > &0, y > &0);
+pub fn get_tiles_around(
+    pos: &Position,
+    block: &Field,
+    field_map: &FieldMap,
+) -> Vec<(Position, Field)> {
+    if block.mines_around != 0 {
+        return vec![];
+    }
 
-//     if pos_y {
-//         if pos_x {
-//             points.push((x - 1, y - 1));
-//         }
-//         points.push((*x, y - 1));
-//         points.push((x + 1, y - 1));
-//     }
+    let mut found = vec![];
+    let mut ignore = HashSet::new();
+    let mut check_from = vec![pos.to_owned()];
+    loop {
+        let adj = check_from
+            .iter()
+            .filter_map(|tile| {
+                let adj = get_adjecent(&tile, &field_map, &ignore);
 
-//     if pos_x {
-//         points.push((x - 1, *y));
-//         points.push((x - 1, y + 1));
-//     }
+                if adj.is_empty() {
+                    None
+                } else {
+                    Some(adj.to_owned())
+                }
+            })
+            .flat_map(|adj| adj.to_owned())
+            .collect::<Vec<(Position, Field)>>();
 
-//     points.iter().fold(0, |total, point| {
-//         if mines.contains(point) {
-//             total + 1
-//         } else {
-//             total
-//         }
-//     })
-// }
+        check_from = adj
+            .iter()
+            .filter_map(|(tile, block)| {
+                if block.mines_around == 0 {
+                    Some(tile.to_owned())
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        if adj.len() == 0 {
+            break;
+        }
+
+        for (tile, _block) in &adj {
+            ignore.insert(tile.to_owned());
+        }
+
+        found.extend(adj);
+    }
+
+    found
+}
