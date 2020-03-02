@@ -163,7 +163,18 @@ impl Application {
                         }
                     })
                     .collect::<Vec<&Position>>();
-                completed = mines.len() == *MINES as usize;
+                let left = game
+                    .field
+                    .iter()
+                    .filter_map(|(position, field)| {
+                        if !field.is_clicked {
+                            Some(position)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<Vec<&Position>>();
+                completed = mines.len() == *MINES as usize && mines.len() == left.len();
             }
 
             if completed {
