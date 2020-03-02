@@ -5,7 +5,6 @@ use crate::{
     },
     MINES,
 };
-// use glib::clone;
 use gtk::{prelude::*, Button};
 use std::{cell::RefCell, rc::Rc};
 

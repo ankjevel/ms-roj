@@ -1,6 +1,3 @@
-// pub mod block;
-// pub mod tile;
-
 pub mod application;
 pub mod block;
 pub mod game;
