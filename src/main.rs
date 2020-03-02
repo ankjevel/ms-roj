@@ -25,7 +25,7 @@ use std::{cell::RefCell, env::args};
 
 fn main() {
     let application =
-        gtk::Application::new(Some("com.github.Iteam13337.msroj"), Default::default())
+        gtk::Application::new(Some("com.github.Iteam13337.ms-roj"), Default::default())
             .expect("Initialization failed...");
 
     application.connect_startup(|app| {

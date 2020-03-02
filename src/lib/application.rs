@@ -2,6 +2,7 @@ use crate::{
     lib::{game::Game, message::Message, ui::build_ui, widget::Widget},
     MINES,
 };
+// use glib::clone;
 use gtk::prelude::*;
 use std::{cell::RefCell, rc::Rc};
 
@@ -73,7 +74,7 @@ impl Application {
                         block.0.set_relief(gtk::ReliefStyle::Normal);
                     });
                 }
-                Message::UpdateButton(position, block) => {
+                Message::UpdateButton(position, block, flag) => {
                     let button = block.0;
                     let mut game = game.borrow_mut();
 
@@ -88,6 +89,21 @@ impl Application {
                     }
 
                     if let Some(field) = game.field.get_mut(&position) {
+                        if flag && field.is_clicked == false {
+                            field.is_flagged = !field.is_flagged;
+
+                            let (label, class) = if field.is_flagged {
+                                ("🏴".to_string(), "flag")
+                            } else {
+                                (" ".to_string(), "")
+                            };
+
+                            button.set_relief(gtk::ReliefStyle::Normal);
+                            button.set_label(&label);
+
+                            return glib::Continue(true);
+                        }
+
                         field.is_clicked = true;
 
                         let (label, class) = if field.is_mine {
@@ -121,13 +137,31 @@ impl Application {
         let mines = widget.mines.clone();
 
         mines.iter().for_each(|(position, block)| {
-            let sender = tx.clone();
+            let send = tx.clone();
+            let msg = Message::UpdateButton(position.clone(), block.clone(), true);
+            block.0.connect_button_release_event(move |_, event| {
+                match event.get_button() {
+                    3 => send.send(msg.clone()).expect("couldn't send"),
+                    _ => {}
+                };
+                Inhibit(false)
+            });
 
-            let msg = Message::UpdateButton(position.clone(), block.clone());
+            let send = tx.clone();
+            let msg = Message::UpdateButton(position.clone(), block.clone(), true);
+            block.0.connect_key_press_event(move |_, key| {
+                match key.get_keyval() {
+                    102 => send.send(msg.clone()).expect("couldn't send"),
+                    _ => {}
+                }
 
-            block.0.connect_clicked(move |e| {
-                println!("event, {:?}", e);
-                sender.send(msg.clone()).expect("couldn't send");
+                Inhibit(false)
+            });
+
+            let send = tx.clone();
+            let msg = Message::UpdateButton(position.clone(), block.clone(), false);
+            block.0.connect_clicked(move |_| {
+                send.send(msg.clone()).expect("couldn't send");
             });
         });
 
