@@ -7,14 +7,15 @@ edition = "2018"
 [dependencies]
 rand = "0.7.3"
 lazy_static = "1.4.0"
-glib = "0.9.3"
+glib = "0.10.3"
+gdk = "0.13.2"
 
 [dependencies.gtk]
-version = "0.8.1"
-features = ["v3_16"]
+version = "0.9.2"
+features = ["v3_24_9"]
 
 [dependencies.gio]
-version = "0.8.1"
+version = "0.9.1"
 features = ["v2_44"]
 
 [profile.release]

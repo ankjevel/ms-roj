@@ -1,12 +1,10 @@
 #![feature(label_break_value)]
-#![cfg_attr(
-    not(feature = "gtk_3_10"),
-    allow(unused_variables, unused_mut, dead_code)
-)]
+#![allow(unused_variables, unused_mut, dead_code)]
 
 #[macro_use]
 extern crate lazy_static;
 
+extern crate gdk;
 extern crate gio;
 extern crate glib;
 extern crate gtk;
@@ -25,9 +23,8 @@ use lib::application::Application;
 use std::{cell::RefCell, env::args};
 
 fn main() {
-    let application =
-        gtk::Application::new(Some("com.github.Iteam1337.ms-roj"), Default::default())
-            .expect("Initialization failed...");
+    let application = gtk::Application::new(Some("com.github.ankjevel.ms-roj"), Default::default())
+        .expect("Initialization failed...");
 
     application.connect_startup(|app| {
         let application = Application::new(app);

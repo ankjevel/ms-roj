@@ -4,7 +4,7 @@ INSTALL_DATA=$(INSTALL) -m 644
 
 bin_dir=$(HOME)/.local/bin
 data_dir=$(HOME)/.local/share
-name=com.github.Iteam1337.ms-roj
+name=com.github.ankjevel.ms-roj
 
 .PHONY : clean install uninstall
 

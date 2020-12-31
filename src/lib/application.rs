@@ -5,7 +5,7 @@ use crate::{
     },
     MINES,
 };
-use gtk::{prelude::*, Button};
+use gtk::prelude::*;
 use std::{cell::RefCell, rc::Rc};
 
 pub struct Application {
@@ -56,7 +56,7 @@ impl Application {
             glib::Continue(true)
         };
 
-        gtk::timeout_add(200, tick);
+        glib::timeout_add_local(200, tick);
     }
 
     fn update_main_ui_thread(&self, rx: glib::Receiver<Message>) {
@@ -94,9 +94,8 @@ impl Application {
                     }
                 }
 
-                let id = format!("mine_{}{}", position.0, position.1);
-                let button: Option<Button> = flood_widget.builder.get_object(&id);
-                if let Some(button) = button {
+                if let Some(block) = flood_widget.mines.get(&Position(position.0, position.1)) {
+                    let button = &block.0;
                     button.set_relief(gtk::ReliefStyle::None);
                     button.set_label(&label);
                     button.set_can_focus(false);
@@ -121,10 +120,8 @@ impl Application {
             let game = show_all_mines_game.borrow();
 
             for mine in &game.mines {
-                let id = format!("mine_{}{}", mine.0, mine.1);
-                let button: Option<Button> = show_all_mines_widget.builder.get_object(&id);
-
-                if let Some(button) = button {
+                if let Some(block) = show_all_mines_widget.mines.get(&Position(mine.0, mine.1)) {
+                    let button = &block.0;
                     if let Some(label) = button.get_label() {
                         if label == "🔥" {
                             continue;
@@ -139,7 +136,7 @@ impl Application {
                 }
             }
 
-            show_all_mines_widget.reset.set_label(&"👻");
+            show_all_mines_widget.button_reset.set_label(&"👻");
         };
 
         let check_if_completed_widget = self.widget.clone();
@@ -180,8 +177,8 @@ impl Application {
                 let mut game = check_if_completed_game.borrow_mut();
                 game.ended = true;
                 game.active = false;
-                widget.reset.set_label("🎊");
-                widget.mines_left.set_label(&"0");
+                widget.button_reset.set_label("🎊");
+                widget.label_mines_left.set_label(&"0");
                 widget.mines.iter().for_each(|(position, block)| {
                     block.0.set_can_focus(false);
                 });
@@ -193,9 +190,9 @@ impl Application {
         rx.attach(None, move |msg| {
             match msg {
                 Message::Reset => {
-                    widget.reset.set_label("🙂");
-                    widget.time.set_label("0:00");
-                    widget.mines_left.set_label(&format!("{}", *MINES));
+                    widget.button_reset.set_label("🙂");
+                    widget.label_time.set_label("0:00");
+                    widget.label_mines_left.set_label(&format!("{}", *MINES));
                     game.borrow_mut().new_mines();
 
                     widget.mines.iter().for_each(|(position, block)| {
@@ -215,8 +212,8 @@ impl Application {
                     let mut game = game.borrow_mut();
                     game.ended = true;
                     game.active = false;
-                    widget.reset.set_label("🎊");
-                    widget.mines_left.set_label(&"0");
+                    widget.button_reset.set_label("🎊");
+                    widget.label_mines_left.set_label(&"0");
                     widget.mines.iter().for_each(|(position, block)| {
                         block.0.set_can_focus(false);
                     });
@@ -270,7 +267,7 @@ impl Application {
                             ctx.add_class(&class);
 
                             let mut mines: i16 =
-                                widget.mines_left.get_label().unwrap().parse().unwrap_or(0);
+                                widget.label_mines_left.get_label().parse().unwrap_or(0);
 
                             if add {
                                 mines += 1;
@@ -278,7 +275,7 @@ impl Application {
                                 mines -= 1;
                             }
 
-                            widget.mines_left.set_label(&mines.to_string());
+                            widget.label_mines_left.set_label(&mines.to_string());
 
                             break 'mut_closure;
                         }
@@ -339,8 +336,8 @@ impl Application {
                         check_if_completed();
                     }
                 }
-                Message::SetTime(time) => widget.time.set_label(&time),
-                Message::SetMines(mines) => widget.mines_left.set_label(&mines),
+                Message::SetTime(time) => widget.label_time.set_label(&time),
+                Message::SetMines(mines) => widget.label_mines_left.set_label(&mines),
                 _ => {}
             }
             glib::Continue(true)
@@ -366,7 +363,7 @@ impl Application {
             let send = tx.clone();
             let msg = Message::UpdateButton(position.clone(), block.clone(), true);
             block.0.connect_key_press_event(move |_, key| {
-                match key.get_keyval() {
+                match key.get_hardware_keycode() {
                     102 => send.send(msg.clone()).expect("couldn't send"),
                     _ => {}
                 }
@@ -387,12 +384,12 @@ impl Application {
     fn setup_labels_and_reset(&self, tx: glib::Sender<Message>) {
         let widget = self.widget.clone();
 
-        widget.time.set_label("0:00");
-        widget.mines_left.set_label(&format!("{}", *MINES));
-        widget.reset.set_label("🙂");
+        widget.label_time.set_label("0:00");
+        widget.label_mines_left.set_label(&format!("{}", *MINES));
+        widget.button_reset.set_label("😷");
 
         widget
-            .reset
+            .button_reset
             .connect_clicked(move |_| tx.send(Message::Reset).expect("reset error"));
     }
 }
