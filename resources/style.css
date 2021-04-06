@@ -1,28 +1,57 @@
+* {
+  /* font-family: "Comic Sans MS", "Comic Sans", cursive; */
+}
+
+.mines {
+  /* background: blue; */
+}
+
+button,
+button:hover,
+button:active,
+button:focus {
+  background: transparent;
+  outline-color: transparent;
+  box-shadow: none;
+  border-radius: 0px;
+  border-color: #bbbbbb;
+}
+
+.btn_close,
+.btn_close:hover,
 .btn_empty,
+.btn_empty:hover {
+  background: transparent;
+  outline-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.btn_empty,
+.btn_empty:hover {
+  color: transparent;
+}
+
+.btn_mine {
+  background-color: #1d282d;
+}
+
+.btn_mine_clicked {
+  background: #991a18;
+}
+
 .btn_close {
   background: none;
 }
 
-
-.btn_mine {
-  background: #1D282D;
-}
-
-.btn_mine_clicked {
-  background: #991A18;
-}
-
-.btn_close {
-}
-
 .btn_close_one {
-  color: #2A82AE;
+  color: #2a82ae;
 }
 
 .btn_close_two {
-  color: #4EB02C;
+  color: #4eb02c;
 }
 
 .btn_close_multiple {
-  color: #991A18;
+  color: #991a18;
 }

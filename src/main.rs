@@ -4,6 +4,9 @@
 #[macro_use]
 extern crate lazy_static;
 
+#[macro_use]
+extern crate lazy_static_include;
+
 extern crate gdk;
 extern crate gio;
 extern crate glib;

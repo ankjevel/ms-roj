@@ -1,6 +1,7 @@
 pub mod application;
 pub mod block;
 pub mod game;
+pub mod icons;
 pub mod message;
 pub mod position;
 pub mod ui;
@@ -8,14 +9,16 @@ pub mod widget;
 
 use crate::{
     lib::{
-        game::{Field, FieldMap},
+        game::{Field, FieldMap, Game},
         position::Position,
+        widget::Widget,
     },
     rand::Rng,
     COLS, MINES, ROWS,
 };
 
-use std::collections::HashSet;
+use gtk::prelude::*;
+use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
 pub fn gen_mines() -> Vec<Position> {
     let mine = || -> Position {
@@ -123,4 +126,55 @@ pub fn get_tiles_around(
     }
 
     found
+}
+
+fn flood(flood_widget: Rc<Widget>, flood_game: Rc<RefCell<Game>>, position: &Position) {
+    let mut positions = Vec::new();
+    {
+        let game = flood_game.borrow();
+        if let Some(field) = game.field.get(&position) {
+            let field_ref = game.field.to_owned();
+            let positions = get_tiles_around(&position, &field, &field_ref)
+                .iter()
+                .for_each(|(position, _)| positions.push(position.to_owned()));
+        }
+    }
+
+    if positions.is_empty() {
+        return;
+    }
+
+    let mut game = flood_game.borrow_mut();
+    for position in positions {
+        let (mut label, mut class_names) = (" ".to_string(), vec![]);
+        if let Some(field) = game.field.get_mut(&position) {
+            field.is_clicked = true;
+
+            if field.mines_around != 0 {
+                label = field.mines_around.to_string();
+                class_names.push("btn_close".to_string());
+                class_names.push(field.mines_around_class_name());
+            } else {
+                class_names.push("btn_empty".to_string());
+            }
+        }
+
+        if let Some(block) = flood_widget.mines.get(&Position(position.0, position.1)) {
+            let button = &block.0;
+            // button.set_relief(gtk::ReliefStyle::None);
+            button.set_label(&label);
+            button.set_can_focus(false);
+            let ctx = button.get_style_context();
+
+            for class_name in ctx.list_classes() {
+                if class_name.starts_with("btn_") {
+                    ctx.remove_class(&class_name);
+                }
+            }
+
+            for class in class_names {
+                ctx.add_class(&class);
+            }
+        }
+    }
 }

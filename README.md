@@ -19,6 +19,11 @@ If you want to install the application (on linux), use:
 make install
 ```
 
+... or OSX:
+```sh
+make app
+```
+
 **note**
 
 `src/lib/application.rs` could need a rewrite..

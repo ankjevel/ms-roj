@@ -1,3 +1,4 @@
 /target
-src/_main.rs
-src/_main.rs
+project.xcworkspace
+bundle/app/build
+bundle/app/Minesweeper.xcodeproj/xcuserdata

@@ -1,6 +1,6 @@
 use crate::{
     lib::{
-        game::Game, get_tiles_around, message::Message, position::Position, ui::build_ui,
+        flood, game::Game, icons::Icon, message::Message, position::Position, ui::build_ui,
         widget::Widget,
     },
     MINES,
@@ -16,18 +16,15 @@ pub struct Application {
 impl Application {
     pub fn new(app: &gtk::Application) -> Self {
         let (tx, rx): (glib::Sender<Message>, glib::Receiver<Message>) =
-            glib::MainContext::channel(glib::PRIORITY_DEFAULT);
+            glib::MainContext::channel(glib::PRIORITY_HIGH);
 
         let app = Application {
             widget: Rc::new(build_ui(app)),
             game: Rc::new(RefCell::new(Game::new())),
         };
-
         app.update_main_ui_thread(rx);
         app.setup_labels_and_reset(tx.clone());
-
         app.bind_clock(tx.clone());
-
         app.bind_click_events(tx.clone())
     }
 
@@ -62,81 +59,34 @@ impl Application {
     fn update_main_ui_thread(&self, rx: glib::Receiver<Message>) {
         let flood_widget = self.widget.clone();
         let flood_game = self.game.clone();
-        let flood = move |position: &Position| {
-            let mut positions: Vec<Position> = Vec::new();
-
-            {
-                let game = flood_game.borrow();
-                if let Some(field) = game.field.get(&position) {
-                    let field_ref = game.field.to_owned();
-                    let positions = get_tiles_around(&position, &field, &field_ref)
-                        .iter()
-                        .for_each(|(position, _)| positions.push(position.to_owned()));
-                }
-            }
-
-            if positions.is_empty() {
-                return;
-            }
-
-            let mut game = flood_game.borrow_mut();
-            for position in positions {
-                let (mut label, mut class_names) = (" ".to_string(), vec![]);
-                if let Some(field) = game.field.get_mut(&position) {
-                    field.is_clicked = true;
-
-                    if field.mines_around != 0 {
-                        label = field.mines_around.to_string();
-                        class_names.push("btn_close".to_string());
-                        class_names.push(field.mines_around_class_name());
-                    } else {
-                        class_names.push("btn_empty".to_string());
-                    }
-                }
-
-                if let Some(block) = flood_widget.mines.get(&Position(position.0, position.1)) {
-                    let button = &block.0;
-                    button.set_relief(gtk::ReliefStyle::None);
-                    button.set_label(&label);
-                    button.set_can_focus(false);
-                    let ctx = button.get_style_context();
-
-                    for class_name in ctx.list_classes() {
-                        if class_name.starts_with("btn_") {
-                            ctx.remove_class(&class_name);
-                        }
-                    }
-
-                    for class in class_names {
-                        ctx.add_class(&class);
-                    }
-                }
-            }
-        };
 
         let show_all_mines_widget = self.widget.clone();
         let show_all_mines_game = self.game.clone();
         let show_all_mines = move || {
             let game = show_all_mines_game.borrow();
+            let widget = show_all_mines_widget.clone();
 
             for mine in &game.mines {
                 if let Some(block) = show_all_mines_widget.mines.get(&Position(mine.0, mine.1)) {
                     let button = &block.0;
-                    if let Some(label) = button.get_label() {
-                        if label == "🔥" {
-                            continue;
-                        }
+                    let ctx = button.get_style_context();
+                    if ctx.has_class("is_mine") && ctx.has_class("is_clicked") {
+                        continue;
                     }
 
-                    button.set_relief(gtk::ReliefStyle::None);
-                    button.set_label(&"💣");
+                    // button.set_relief(gtk::ReliefStyle::None);
+                    // button.set_label(&"💣");
+                    button.set_image(widget.icons.get(&Icon::Bomb));
                     button.set_can_focus(false);
-                    let ctx = button.get_style_context();
+                    button.set_label(&"".to_string());
                     ctx.add_class(&"btn_mine");
                 }
             }
 
-            show_all_mines_widget.button_reset.set_label(&"👻");
+            // show_all_mines_widget.button_reset.set_label(&"👻");
+            show_all_mines_widget
+                .button_reset
+                .set_image(show_all_mines_widget.icons.get(&Icon::Dead));
         };
 
         let check_if_completed_widget = self.widget.clone();
@@ -177,7 +127,10 @@ impl Application {
                 let mut game = check_if_completed_game.borrow_mut();
                 game.ended = true;
                 game.active = false;
-                widget.button_reset.set_label("🎊");
+                // widget.button_reset.set_label("🎊");
+                widget
+                    .button_reset
+                    .set_image(widget.icons.get(&Icon::Party));
                 widget.label_mines_left.set_label(&"0");
                 widget.mines.iter().for_each(|(position, block)| {
                     block.0.set_can_focus(false);
@@ -190,17 +143,24 @@ impl Application {
         rx.attach(None, move |msg| {
             match msg {
                 Message::Reset => {
-                    widget.button_reset.set_label("🙂");
+                    // widget.button_reset.set_label("🙂");
+                    widget
+                        .button_reset
+                        .set_image(widget.icons.get(&Icon::Happy));
                     widget.label_time.set_label("0:00");
                     widget.label_mines_left.set_label(&format!("{}", *MINES));
                     game.borrow_mut().new_mines();
 
                     widget.mines.iter().for_each(|(position, block)| {
-                        block.0.set_label(" ");
-                        block.0.set_can_focus(true);
-                        block.0.set_relief(gtk::ReliefStyle::Normal);
-                        let ctx = block.0.get_style_context();
+                        let button = &block.0;
+                        button.set_label(" ");
+                        button.set_can_focus(true);
+                        // button.set_relief(gtk::ReliefStyle::Normal);
 
+                        let ctx = button.get_style_context();
+                        ctx.remove_class("is_flagged");
+                        ctx.remove_class("is_clicked");
+                        ctx.remove_class("is_mine");
                         for class_name in ctx.list_classes() {
                             if class_name.starts_with("btn_") {
                                 ctx.remove_class(&class_name);
@@ -212,7 +172,10 @@ impl Application {
                     let mut game = game.borrow_mut();
                     game.ended = true;
                     game.active = false;
-                    widget.button_reset.set_label("🎊");
+                    // widget.button_reset.set_label("🎊");
+                    widget
+                        .button_reset
+                        .set_image(widget.icons.get(&Icon::Party));
                     widget.label_mines_left.set_label(&"0");
                     widget.mines.iter().for_each(|(position, block)| {
                         block.0.set_can_focus(false);
@@ -225,12 +188,13 @@ impl Application {
 
                     'mut_closure: {
                         let mut game = game.borrow_mut();
+                        let widget = widget.clone();
 
                         if game.ended {
                             break 'mut_closure;
                         }
 
-                        button.set_relief(gtk::ReliefStyle::None);
+                        // button.set_relief(gtk::ReliefStyle::None);
 
                         if !game.active {
                             game.start_timer();
@@ -243,6 +207,7 @@ impl Application {
                         }
 
                         let mut field = field.unwrap();
+                        let ctx = button.get_style_context();
 
                         if flag && field.is_clicked == false {
                             field.is_flagged = !field.is_flagged;
@@ -253,10 +218,14 @@ impl Application {
                                 (" ", "", true)
                             };
 
-                            button.set_relief(gtk::ReliefStyle::Normal);
-                            button.set_label(&label.to_string());
-
-                            let ctx = button.get_style_context();
+                            // button.set_relief(gtk::ReliefStyle::Normal);
+                            if field.is_flagged {
+                                button.set_image(widget.icons.get(&Icon::Flag));
+                                button.set_label(&"".to_string());
+                                ctx.add_class("is_flagged");
+                            } else {
+                                button.set_label(&label.to_string());
+                            }
 
                             for class_name in ctx.list_classes() {
                                 if class_name.starts_with("btn_") {
@@ -302,9 +271,14 @@ impl Application {
                         if field.is_mine {
                             game.active = false;
                             game.ended = true;
+                            ctx.add_class("is_mine");
+                            ctx.add_class("is_clicked");
+                            button.set_label(&"".to_string());
+                            button.set_image(widget.icons.get(&Icon::Fire));
+                        } else {
+                            button.set_label(&label);
                         }
 
-                        button.set_label(&label);
                         button.set_can_focus(false);
 
                         let ctx = button.get_style_context();
@@ -329,7 +303,7 @@ impl Application {
                     }
 
                     if empty {
-                        flood(&position);
+                        flood(flood_widget.clone(), flood_game.clone(), &position);
                     } else if game_ended {
                         show_all_mines();
                     } else {
@@ -340,6 +314,7 @@ impl Application {
                 Message::SetMines(mines) => widget.label_mines_left.set_label(&mines),
                 _ => {}
             }
+            widget.window.show_all();
             glib::Continue(true)
         });
     }
@@ -386,7 +361,10 @@ impl Application {
 
         widget.label_time.set_label("0:00");
         widget.label_mines_left.set_label(&format!("{}", *MINES));
-        widget.button_reset.set_label("😷");
+        // widget.button_reset.set_label("😷");
+        widget
+            .button_reset
+            .set_image(widget.icons.get(&Icon::Happy));
 
         widget
             .button_reset

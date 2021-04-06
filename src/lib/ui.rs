@@ -1,12 +1,20 @@
 use crate::{
-    lib::{block::Block, position::Position, widget::Widget},
+    lib::{
+        block::Block,
+        icons::{Icon, Icons},
+        position::Position,
+        widget::Widget,
+    },
     COLS, ROWS,
 };
+
 use gtk::{prelude::*, Application, ApplicationWindow, CssProvider, Orientation, StyleContext};
 
 use std::{collections::HashMap, rc::Rc};
 
 pub fn build_ui<'a>(application: &'a Application) -> Widget {
+    let icons = Icons::new();
+
     let window = ApplicationWindow::new(application);
     window.set_title("MS Röj");
     window.set_can_focus(false);
@@ -46,7 +54,8 @@ pub fn build_ui<'a>(application: &'a Application) -> Widget {
     let button_reset = gtk::Button::new();
     button_reset.set_visible(true);
     button_reset.set_can_focus(false);
-    button_reset.set_label(":)");
+    button_reset.set_label(&"".to_string());
+    button_reset.set_image(icons.get(&Icon::Happy));
     button_reset.set_receives_default(false);
     top_bar.add(&button_reset);
     top_bar.set_cell_left_attach(&button_reset, 2);
@@ -57,21 +66,28 @@ pub fn build_ui<'a>(application: &'a Application) -> Widget {
     main_widget.set_child_packing(&top_bar, true, true, 0, gtk::PackType::Start);
 
     let mines_grid = gtk::Grid::new();
+    let ctx = mines_grid.get_style_context();
+
+    ctx.add_class("mines");
+
     let mut mines = HashMap::new();
 
     for y in 0..*ROWS {
         for x in 0..*COLS {
             let mine = gtk::Button::new();
+            mine.reset_style();
             mine.set_label(" ");
             mine.set_can_focus(true);
             mine.set_focus_on_click(false);
-            mine.set_relief(gtk::ReliefStyle::Normal);
+            // mine.set_relief(gtk::ReliefStyle::Normal);
             mine.set_receives_default(false);
             mine.set_border_width(2);
-
             mines_grid.add(&mine);
             mines_grid.set_cell_left_attach(&mine, y as i32);
             mines_grid.set_cell_top_attach(&mine, x as i32);
+
+            mine.set_has_tooltip(true);
+
             mines.insert(Position(x, y), Block::new(mine));
         }
     }
@@ -95,5 +111,6 @@ pub fn build_ui<'a>(application: &'a Application) -> Widget {
         label_mines_left,
         label_time,
         button_reset,
+        icons,
     }
 }

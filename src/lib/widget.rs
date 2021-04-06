@@ -1,4 +1,4 @@
-use crate::lib::{block::Block, position::Position};
+use crate::lib::{block::Block, icons::Icons, position::Position};
 use gtk::{ApplicationWindow, Button, Label};
 use std::{collections::HashMap, rc::Rc};
 
@@ -9,4 +9,5 @@ pub struct Widget {
     pub label_mines_left: Label,
     pub label_time: Label,
     pub button_reset: Button,
+    pub icons: Icons,
 }
