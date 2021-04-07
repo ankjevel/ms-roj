@@ -4,18 +4,13 @@
   font-size: 24px;
   text-shadow: none;
   font-weight: 900;
+  outline-style: none;
 }
 
-.reset {
-  background-image: url("./resources/icons/1F600_color.png");
-}
-
-button,
-button:hover,
-button:active,
-button:focus {
+button {
   border-radius: 0;
   background-image: none;
+  border-width: 0;
   background-color: transparent;
   outline-color: transparent;
   box-shadow: none;
@@ -30,12 +25,42 @@ button:focus {
 }
 
 .top_bar {
-  padding: 0;
+  padding: 8px;
   background-color: #C4C6CB;
   border: 4px solid #787878;
   border-right-color: white;
   border-bottom-color: white;
   margin-bottom: 16px;
+}
+
+.top_bar .reset {
+  margin: 0;
+  padding: 0px 4px;
+  background-color: #C5C6CA;
+  border: 4px solid white;
+  border-right-color: #787878;
+  border-bottom-color: #787878;
+}
+
+.top_bar .label {
+  background-color: black;
+  color: red;
+  font-weight: 100;
+  margin: 0;
+  padding: 0 4px;
+
+  text-shadow: red 0 0 10px;
+
+  border: 1px solid #787878;
+  border-right-color: white;
+  border-bottom-color: white;
+}
+
+.top_bar .state_won {
+  background-color: green;
+}
+.top_bar .state_lost {
+  background-color: black;
 }
 
 .mines {
@@ -45,8 +70,7 @@ button:focus {
   border-bottom-color: white;
 }
 
-.mine,
-.mine:hover {
+.mine {
   border: 4px solid white;
   border-right-color: #787878;
   border-bottom-color: #787878;
@@ -56,34 +80,43 @@ button:focus {
 }
 
 .mine.btn_nearby,
-.mine.btn_nearby:hover,
-.mine.btn_empty,
-.mine.btn_empty:hover {
+.mine.btn_empty {
   background-image: none;
   background-color: #C3C5CA;
-  outline-color: transparent;
-  border: 1px solid #787878;
-  box-shadow: none;
 }
 
+.mine.btn_nearby,
 .mine.btn_empty,
-.mine.btn_empty:hover {
+.mine.btn_flag.btn_error,
+.mine.btn_mine,
+.mine.btn_mine.btn_mine_clicked {
+  border: 1px solid #787878;
+  border-right-width: 0;
+  border-bottom-width: 0;
+}
+
+.mine.btn_empty {
   color: transparent;
 }
 
 .mine.btn_flag {
   background-color: rgb(101, 20, 207);
-  background-image: url("./resources/icons/E091_color.png");
+  background-image: url("resources/icons/E091_color.png");
+}
+
+
+.mine.btn_flag.btn_error {
+  background-color: orange;
 }
 
 .mine.btn_mine {
   background-color: rgb(47, 168, 112);
-  background-image: url("./resources/icons/1F4A3_color.png");
+  background-image: url("resources/icons/1F4A3_color.png");
 }
 
 .mine.btn_mine.btn_mine_clicked {
   background-color: #991a18;
-  background-image: url("./resources/icons/1F525_color.png");
+  background-image: url("resources/icons/1F525_color.png");
 }
 
 .mine.btn_nearby_one {

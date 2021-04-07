@@ -3,9 +3,35 @@ use crate::{
     COLS, ROWS,
 };
 
+use gio::prelude::*;
 use gtk::{prelude::*, Application, ApplicationWindow, CssProvider, Orientation, StyleContext};
 
 use std::{collections::HashMap, rc::Rc};
+
+fn init_menu_bar_actions<'a>(
+    application: &'a Application,
+    window: &'a ApplicationWindow,
+) -> HashMap<String, Rc<gio::SimpleAction>> {
+    let menu = gio::Menu::new();
+    let mut menu_bar_actions = HashMap::new();
+
+    menu.append(Some("New Game"), Some("app.new_game"));
+    menu.append(Some("Quit"), Some("app.quit"));
+
+    application.set_accels_for_action("app.quit", &["<Primary>Q"]);
+    application.set_accels_for_action("app.new_game", &["<Primary>N"]);
+    application.set_app_menu(Some(&menu));
+
+    let quit = gio::SimpleAction::new("quit", None);
+    application.add_action(&quit);
+    menu_bar_actions.insert("quit".to_string(), Rc::new(quit));
+
+    let new_game = gio::SimpleAction::new("new_game", None);
+    application.add_action(&new_game);
+    menu_bar_actions.insert("new_game".to_string(), Rc::new(new_game));
+
+    menu_bar_actions
+}
 
 pub fn build_ui<'a>(application: &'a Application) -> Widget {
     let window = ApplicationWindow::new(application);
@@ -20,23 +46,18 @@ pub fn build_ui<'a>(application: &'a Application) -> Widget {
     main_widget.set_widget_name("main_widget");
     main_widget.get_style_context().add_class("main_widget");
 
-    let top_bar = gtk::Grid::new();
+    let top_bar = gtk::Box::new(Orientation::Horizontal, 0);
     top_bar.set_visible(true);
     top_bar.set_can_focus(false);
-    top_bar.set_border_width(0);
-    top_bar.set_orientation(Orientation::Vertical);
-    top_bar.set_row_homogeneous(true);
-    top_bar.set_column_homogeneous(true);
     top_bar.get_style_context().add_class("top_bar");
 
     let label_mines_left = gtk::Label::new(Some("mines_left"));
     label_mines_left.set_visible(true);
     label_mines_left.set_can_focus(false);
     label_mines_left.set_label("10");
-
+    label_mines_left.get_style_context().add_class("label");
+    label_mines_left.set_size_request(50, 0);
     top_bar.add(&label_mines_left);
-    top_bar.set_cell_left_attach(&label_mines_left, 0);
-    top_bar.set_cell_top_attach(&label_mines_left, 0);
 
     let button_reset = gtk::Button::new();
     button_reset.set_visible(true);
@@ -45,25 +66,22 @@ pub fn build_ui<'a>(application: &'a Application) -> Widget {
     button_reset.get_style_context().add_class("reset");
     button_reset.set_receives_default(false);
     top_bar.add(&button_reset);
-    top_bar.set_cell_left_attach(&button_reset, 1);
-    top_bar.set_cell_top_attach(&button_reset, 0);
+    top_bar.set_child_packing(&button_reset, true, false, 0, gtk::PackType::Start);
 
     let label_time = gtk::Label::new(Some("time"));
     label_time.set_visible(true);
     label_time.set_can_focus(false);
     label_time.set_label("0:00");
+    label_time.set_size_request(80, 0);
+    label_time.get_style_context().add_class("label");
     top_bar.add(&label_time);
-    top_bar.set_cell_left_attach(&label_time, 2);
-    top_bar.set_cell_top_attach(&label_time, 0);
 
     window.add(&main_widget);
     main_widget.add(&top_bar);
     main_widget.set_child_packing(&top_bar, true, true, 0, gtk::PackType::Start);
 
     let mines_grid = gtk::Grid::new();
-    let ctx = mines_grid.get_style_context();
-
-    ctx.add_class("mines");
+    mines_grid.get_style_context().add_class("mines");
 
     let mut mines = HashMap::new();
 
@@ -75,7 +93,7 @@ pub fn build_ui<'a>(application: &'a Application) -> Widget {
             mine.set_focus_on_click(false);
             mine.set_receives_default(false);
             mine.set_border_width(0);
-            mine.set_size_request(50, 50);
+            mine.set_size_request(40, 40);
             mine.get_style_context().add_class("mine");
             mines_grid.add(&mine);
             mines_grid.set_cell_left_attach(&mine, y as i32);
@@ -86,6 +104,8 @@ pub fn build_ui<'a>(application: &'a Application) -> Widget {
 
     main_widget.add(&mines_grid);
     main_widget.set_child_packing(&mines_grid, true, true, 0, gtk::PackType::End);
+
+    let menu_bar_actions = init_menu_bar_actions(&application, &window);
 
     window.show_all();
 
@@ -103,5 +123,6 @@ pub fn build_ui<'a>(application: &'a Application) -> Widget {
         label_mines_left,
         label_time,
         button_reset,
+        menu_bar_actions,
     }
 }

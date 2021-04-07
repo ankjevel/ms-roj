@@ -4,18 +4,10 @@
 #[macro_use]
 extern crate lazy_static;
 
-macro_rules! clear_all_classes {
-    ($style_context:expr) => {
+macro_rules! clear_classes {
+    ($style_context:expr, $class:expr) => {
         for class_name in $style_context.list_classes() {
-            $style_context.remove_class(&class_name);
-        }
-    };
-}
-
-macro_rules! clear_btn_classes {
-    ($style_context:expr) => {
-        for class_name in $style_context.list_classes() {
-            if class_name.starts_with("btn_") {
+            if class_name.starts_with($class) {
                 $style_context.remove_class(&class_name);
             }
         }

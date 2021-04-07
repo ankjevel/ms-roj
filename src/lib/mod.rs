@@ -176,7 +176,7 @@ fn flood(flood_widget: Rc<Widget>, flood_game: Rc<RefCell<Game>>, position: &Pos
                 flood_widget.label_mines_left.set_label(&mines.to_string());
             }
 
-            clear_btn_classes!(ctx);
+            clear_classes!(ctx, "btn_");
 
             for class in class_names {
                 ctx.add_class(&class);

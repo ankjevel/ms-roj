@@ -19,10 +19,30 @@ impl Application {
             widget: Rc::new(build_ui(app)),
             game: Rc::new(RefCell::new(Game::new())),
         };
+
         app.update_main_ui_thread(rx);
+
+        app.bind_menubar(tx.clone());
         app.setup_labels_and_reset(tx.clone());
         app.bind_clock(tx.clone());
         app.bind_click_events(tx.clone())
+    }
+
+    fn bind_menubar(&self, tx: glib::Sender<Message>) {
+        let widget = self.widget.clone();
+        let window = &widget.window;
+
+        if let Some(quit) = widget.menu_bar_actions.get("quit") {
+            quit.connect_activate(glib::clone!(@weak window => move |_, _| {
+                window.close();
+            }));
+        }
+
+        if let Some(new_game) = widget.menu_bar_actions.get("new_game") {
+            new_game.connect_activate(glib::clone!(@weak window => move |_, _| {
+                tx.send(Message::Reset).expect("could not reset");
+            }));
+        }
     }
 
     fn bind_clock(&self, tx: glib::Sender<Message>) {
@@ -60,24 +80,33 @@ impl Application {
             let game = show_all_mines_game.borrow();
             let widget = show_all_mines_widget.clone();
 
-            for mine in &game.mines {
-                if let Some(block) = show_all_mines_widget.mines.get(&Position(mine.0, mine.1)) {
+            for (position, field) in &game.field {
+                if !field.is_mine && !field.is_flagged {
+                    continue;
+                }
+
+                if let Some(block) = show_all_mines_widget.mines.get(&position) {
                     let button = &block.0;
                     let ctx = button.get_style_context();
-                    if ctx.has_class("btn_mine") {
-                        continue;
-                    }
 
                     button.set_can_focus(false);
                     button.set_label(" ");
-                    ctx.add_class("btn_mine");
+
+                    if !field.is_mine && field.is_flagged {
+                        ctx.add_class("btn_error");
+                    } else if field.is_mine && !field.is_flagged {
+                        ctx.add_class("btn_mine");
+                        if field.is_clicked {
+                            ctx.add_class("btn_mine_clicked");
+                        }
+                    }
                 }
             }
 
             show_all_mines_widget
                 .button_reset
                 .get_style_context()
-                .add_class("end");
+                .add_class("state_lost");
         };
 
         let check_if_completed_widget = self.widget.clone();
@@ -93,7 +122,6 @@ impl Application {
                     .field
                     .iter()
                     .filter_map(|(position, field)| {
-                        // && field.is_flagged
                         if game.mines.contains(&position) && !field.is_clicked {
                             Some(position)
                         } else {
@@ -125,7 +153,7 @@ impl Application {
             widget
                 .button_reset
                 .get_style_context()
-                .add_class("completed");
+                .add_class("state_won");
             widget.label_mines_left.set_label(&"0");
             widget.mines.iter().for_each(|(position, block)| {
                 block.0.set_can_focus(false);
@@ -141,8 +169,7 @@ impl Application {
             match msg {
                 Message::Reset => {
                     let ctx = widget.button_reset.get_style_context();
-                    clear_all_classes!(ctx);
-                    ctx.add_class("reset");
+                    clear_classes!(ctx, "state_");
                     widget.label_time.set_label("0:00");
                     widget.label_mines_left.set_label(&format!("{}", *MINES));
                     game.borrow_mut().new_mines();
@@ -151,7 +178,7 @@ impl Application {
                         let button = &block.0;
                         button.set_label(" ");
                         button.set_can_focus(true);
-                        clear_btn_classes!(button.get_style_context());
+                        clear_classes!(button.get_style_context(), "btn_");
                     });
                 }
                 Message::End => {
@@ -160,8 +187,8 @@ impl Application {
                     game.active = false;
 
                     let ctx = widget.button_reset.get_style_context();
-                    clear_all_classes!(ctx);
-                    ctx.add_class("completed");
+                    clear_classes!(ctx, "state_");
+                    ctx.add_class("state_won");
                     widget.label_mines_left.set_label(&"0");
                     widget.mines.iter().for_each(|(position, block)| {
                         block.0.set_can_focus(false);
@@ -193,10 +220,14 @@ impl Application {
                         let mut field = field.unwrap();
                         let ctx = button.get_style_context();
 
-                        if flag && field.is_clicked == false {
+                        if flag && field.is_clicked == false || field.is_flagged {
                             field.is_flagged = !field.is_flagged;
                             let mut mines: i16 =
                                 widget.label_mines_left.get_label().parse().unwrap_or(0);
+
+                            if mines <= 0 && field.is_flagged {
+                                break 'mut_closure;
+                            }
 
                             if field.is_flagged {
                                 mines -= 1;
@@ -242,7 +273,7 @@ impl Application {
 
                         let ctx = button.get_style_context();
 
-                        clear_btn_classes!(ctx);
+                        clear_classes!(ctx, "btn_");
 
                         for class in &class_names {
                             ctx.add_class(class);
@@ -316,7 +347,6 @@ impl Application {
 
         widget.label_time.set_label("0:00");
         widget.label_mines_left.set_label(&format!("{}", *MINES));
-        widget.button_reset.get_style_context().add_class("reset");
 
         widget
             .button_reset
