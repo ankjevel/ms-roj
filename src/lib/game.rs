@@ -41,7 +41,7 @@ pub struct Field {
 impl Field {
     pub fn mines_around_class_name(&self) -> String {
         format!(
-            "btn_close_{}",
+            "btn_nearby_{}",
             match self.mines_around {
                 1 => "one",
                 2 => "two",

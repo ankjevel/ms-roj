@@ -1,7 +1,6 @@
 pub mod application;
 pub mod block;
 pub mod game;
-pub mod icons;
 pub mod message;
 pub mod position;
 pub mod ui;
@@ -152,7 +151,7 @@ fn flood(flood_widget: Rc<Widget>, flood_game: Rc<RefCell<Game>>, position: &Pos
 
             if field.mines_around != 0 {
                 label = field.mines_around.to_string();
-                class_names.push("btn_close".to_string());
+                class_names.push("btn_nearby".to_string());
                 class_names.push(field.mines_around_class_name());
             } else {
                 class_names.push("btn_empty".to_string());
@@ -161,16 +160,23 @@ fn flood(flood_widget: Rc<Widget>, flood_game: Rc<RefCell<Game>>, position: &Pos
 
         if let Some(block) = flood_widget.mines.get(&Position(position.0, position.1)) {
             let button = &block.0;
-            // button.set_relief(gtk::ReliefStyle::None);
             button.set_label(&label);
             button.set_can_focus(false);
             let ctx = button.get_style_context();
 
-            for class_name in ctx.list_classes() {
-                if class_name.starts_with("btn_") {
-                    ctx.remove_class(&class_name);
-                }
+            if ctx.has_class("btn_flag") {
+                let mut mines: i16 = flood_widget
+                    .label_mines_left
+                    .get_label()
+                    .parse()
+                    .unwrap_or(0);
+
+                mines += 1;
+
+                flood_widget.label_mines_left.set_label(&mines.to_string());
             }
+
+            clear_btn_classes!(ctx);
 
             for class in class_names {
                 ctx.add_class(&class);

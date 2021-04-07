@@ -1,57 +1,99 @@
 * {
-  /* font-family: "Comic Sans MS", "Comic Sans", cursive; */
+  font-family: monospace;
+  transition: none;
+  font-size: 24px;
+  text-shadow: none;
+  font-weight: 900;
 }
 
-.mines {
-  /* background: blue; */
+.reset {
+  background-image: url("./resources/icons/1F600_color.png");
 }
 
 button,
 button:hover,
 button:active,
 button:focus {
-  background: transparent;
+  border-radius: 0;
+  background-image: none;
+  background-color: transparent;
   outline-color: transparent;
-  box-shadow: none;
-  border-radius: 0px;
-  border-color: #bbbbbb;
-}
-
-.btn_close,
-.btn_close:hover,
-.btn_empty,
-.btn_empty:hover {
-  background: transparent;
-  outline-color: transparent;
-  border-color: transparent;
   box-shadow: none;
 }
 
-.btn_empty,
-.btn_empty:hover {
+.main_widget {
+  background-color: #C4C6CB;
+  border: 6px solid white;
+  border-right-color: #787878;
+  border-bottom-color: #787878;
+  padding: 16px;
+}
+
+.top_bar {
+  padding: 0;
+  background-color: #C4C6CB;
+  border: 4px solid #787878;
+  border-right-color: white;
+  border-bottom-color: white;
+  margin-bottom: 16px;
+}
+
+.mines {
+  background-color: #C4C6CB;
+  border: 6px solid #787878;
+  border-right-color: white;
+  border-bottom-color: white;
+}
+
+.mine,
+.mine:hover {
+  border: 4px solid white;
+  border-right-color: #787878;
+  border-bottom-color: #787878;
+  padding: 0;
+  margin: 0;
+  background-color: #C4C7CA;
+}
+
+.mine.btn_nearby,
+.mine.btn_nearby:hover,
+.mine.btn_empty,
+.mine.btn_empty:hover {
+  background-image: none;
+  background-color: #C3C5CA;
+  outline-color: transparent;
+  border: 1px solid #787878;
+  box-shadow: none;
+}
+
+.mine.btn_empty,
+.mine.btn_empty:hover {
   color: transparent;
 }
 
-.btn_mine {
-  background-color: #1d282d;
+.mine.btn_flag {
+  background-color: rgb(101, 20, 207);
+  background-image: url("./resources/icons/E091_color.png");
 }
 
-.btn_mine_clicked {
-  background: #991a18;
+.mine.btn_mine {
+  background-color: rgb(47, 168, 112);
+  background-image: url("./resources/icons/1F4A3_color.png");
 }
 
-.btn_close {
-  background: none;
+.mine.btn_mine.btn_mine_clicked {
+  background-color: #991a18;
+  background-image: url("./resources/icons/1F525_color.png");
 }
 
-.btn_close_one {
+.mine.btn_nearby_one {
   color: #2a82ae;
 }
 
-.btn_close_two {
+.mine.btn_nearby_two {
   color: #4eb02c;
 }
 
-.btn_close_multiple {
+.mine.btn_nearby_multiple {
   color: #991a18;
 }

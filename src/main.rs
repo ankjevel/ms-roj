@@ -4,8 +4,23 @@
 #[macro_use]
 extern crate lazy_static;
 
-#[macro_use]
-extern crate lazy_static_include;
+macro_rules! clear_all_classes {
+    ($style_context:expr) => {
+        for class_name in $style_context.list_classes() {
+            $style_context.remove_class(&class_name);
+        }
+    };
+}
+
+macro_rules! clear_btn_classes {
+    ($style_context:expr) => {
+        for class_name in $style_context.list_classes() {
+            if class_name.starts_with("btn_") {
+                $style_context.remove_class(&class_name);
+            }
+        }
+    };
+}
 
 extern crate gdk;
 extern crate gio;
