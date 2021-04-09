@@ -76,7 +76,7 @@ impl Application {
     fn update_main_ui_thread(&self, rx: glib::Receiver<Message>) {
         let show_all_mines_widget = self.widget.clone();
         let show_all_mines_game = self.game.clone();
-        let show_all_mines = move || {
+        let show_all_mines = move |completed: bool| {
             let game = show_all_mines_game.borrow();
             let widget = show_all_mines_widget.clone();
 
@@ -106,16 +106,15 @@ impl Application {
             show_all_mines_widget
                 .button_reset
                 .get_style_context()
-                .add_class("state_lost");
+                .add_class(if completed { "state_won" } else { "state_lost" });
         };
 
         let check_if_completed_widget = self.widget.clone();
         let check_if_completed_game = self.game.clone();
-        let check_if_completed = move || {
+        let check_if_completed = move || -> bool {
             let check_if_completed_game = check_if_completed_game.clone();
             let widget = check_if_completed_widget.clone();
             let completed: bool;
-
             {
                 let game = check_if_completed_game.borrow();
                 let mines = game
@@ -143,21 +142,13 @@ impl Application {
                 completed = mines.len() == *MINES as usize && mines.len() == left.len();
             }
 
-            if !completed {
-                return;
+            if completed {
+                let mut game = check_if_completed_game.borrow_mut();
+                game.ended = true;
+                game.active = false;
             }
 
-            let mut game = check_if_completed_game.borrow_mut();
-            game.ended = true;
-            game.active = false;
-            widget
-                .button_reset
-                .get_style_context()
-                .add_class("state_won");
-            widget.label_mines_left.set_label(&"0");
-            widget.mines.iter().for_each(|(position, block)| {
-                block.0.set_can_focus(false);
-            });
+            completed
         };
 
         let widget = self.widget.clone();
@@ -291,9 +282,9 @@ impl Application {
                     if empty {
                         flood(flood_widget.clone(), flood_game.clone(), &position);
                     } else if game_ended {
-                        show_all_mines();
-                    } else {
-                        check_if_completed();
+                        show_all_mines(false);
+                    } else if check_if_completed() {
+                        show_all_mines(true);
                     }
                 }
                 Message::SetTime(time) => widget.label_time.set_label(&time),
