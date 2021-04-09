@@ -7,13 +7,17 @@ func log(_ data: Data) {
 }
 
 let task = Process()
-let bundle = Bundle.main
-let rustBinName = bundle.infoDictionary?["RustBinaryName"] as! String
-task.launchPath = bundle.path(forResource: rustBinName, ofType: nil)
-task.environment = ["RUST_BACKTRACE": "1"]
-
 let stdOut = Pipe()
 let stdErr = Pipe()
+let bundle = Bundle.main
+let path = bundle.resourcePath!
+let rustBinName = bundle.infoDictionary?["RustBinaryName"] as! String
+
+task.launchPath = bundle.path(forResource: rustBinName, ofType: nil)
+task.environment = [
+    "RUST_BACKTRACE": "1",
+    "DYLD_FALLBACK_LIBRARY_PATH": "\(path)/lib",
+]
 
 stdOut.fileHandleForReading.readabilityHandler = { log($0.availableData) }
 stdErr.fileHandleForReading.readabilityHandler = { log($0.availableData) }

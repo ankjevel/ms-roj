@@ -3,7 +3,6 @@
 *A minesweeper game*
 
 First, you need to setup [gtk](https://www.gtk.org/docs/installations/) for your environment.<br/>
-The rust version I used was 1.42.0-nightly (**old**)
 
 ## build
 
@@ -23,7 +22,3 @@ make install
 ```sh
 make app
 ```
-
-**note**
-
-`src/lib/application.rs` could need a rewrite..

@@ -23,7 +23,7 @@ app:
 	@cd bundle/app && xcodebuild
 
 target/release/ms-roj: src
-	cargo build --release
+	@cargo build --release
 
 install: target/release/ms-roj
 	# Install binary
@@ -34,8 +34,8 @@ install: target/release/ms-roj
 
 uninstall:
 	# Remove the desktop file
-	rm -f $(data_dir)/applications/$(name).desktop
+	@rm -f $(data_dir)/applications/$(name).desktop
 
 	# Remove the binary
-	rm -f $(bin_dir)/bin/$(name)
+	@rm -f $(bin_dir)/bin/$(name)
 
