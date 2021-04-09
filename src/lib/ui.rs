@@ -107,15 +107,13 @@ pub fn build_ui<'a>(application: &'a Application) -> Widget {
 
     let menu_bar_actions = init_menu_bar_actions(&application, &window);
 
-    window.show_all();
-
     let screen = window.get_screen().unwrap();
     let style = CssProvider::new();
 
-    style
-        .load_from_data(include_bytes!("../../resources/style.css"))
-        .unwrap();
+    style.load_from_resource("/resources/style.css");
     StyleContext::add_provider_for_screen(&screen, &style, gtk::STYLE_PROVIDER_PRIORITY_USER);
+
+    window.show_all();
 
     Widget {
         mines: Rc::new(mines),

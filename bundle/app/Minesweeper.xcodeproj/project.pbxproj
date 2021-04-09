@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		71844FA3261C7B3A00EF1E4D /* ms-roj in Resources */ = {isa = PBXBuildFile; fileRef = 8ADFC73B1DD67DF60080DCCC /* ms-roj */; };
-		71CE1B2F261C91F700943417 /* resources in Resources */ = {isa = PBXBuildFile; fileRef = 71CE1B2E261C91F700943417 /* resources */; };
 		8ADFC72B1DD67B670080DCCC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8ADFC72A1DD67B670080DCCC /* Assets.xcassets */; };
 		8ADFC7361DD67B950080DCCC /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ADFC7351DD67B950080DCCC /* main.swift */; };
 /* End PBXBuildFile section */
@@ -24,7 +23,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		71CE1B2E261C91F700943417 /* resources */ = {isa = PBXFileReference; lastKnownFileType = text; name = resources; path = ../../resources; sourceTree = SOURCE_ROOT; };
 		8ADFC7251DD67B670080DCCC /* Minesweeper.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Minesweeper.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8ADFC72A1DD67B670080DCCC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = SOURCE_ROOT; };
 		8ADFC72F1DD67B670080DCCC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = SOURCE_ROOT; };
@@ -62,7 +60,6 @@
 		8ADFC7271DD67B670080DCCC /* Package */ = {
 			isa = PBXGroup;
 			children = (
-				71CE1B2E261C91F700943417 /* resources */,
 				8ADFC72A1DD67B670080DCCC /* Assets.xcassets */,
 				8ADFC73B1DD67DF60080DCCC /* ms-roj */,
 				8ADFC72F1DD67B670080DCCC /* Info.plist */,
@@ -156,7 +153,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				71844FA3261C7B3A00EF1E4D /* ms-roj in Resources */,
-				71CE1B2F261C91F700943417 /* resources in Resources */,
 				8ADFC72B1DD67B670080DCCC /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -19,7 +19,6 @@ impl Application {
             widget: Rc::new(build_ui(app)),
             game: Rc::new(RefCell::new(Game::new())),
         };
-
         app.update_main_ui_thread(rx);
 
         app.bind_menubar(tx.clone());

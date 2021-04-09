@@ -37,6 +37,11 @@ fn main() {
         .expect("Initialization failed...");
 
     application.connect_startup(|app| {
+        let res_bytes = include_bytes!("../resources/resources.gresource");
+        let data = glib::Bytes::from(&res_bytes[..]);
+        let resource = gio::Resource::from_data(&data).unwrap();
+        gio::resources_register(&resource);
+
         let application = Application::new(app);
         let application_container = RefCell::new(Some(application));
         app.connect_shutdown(move |_| {
