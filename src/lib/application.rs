@@ -106,6 +106,10 @@ impl Application {
                 .button_reset
                 .get_style_context()
                 .add_class(if completed { "state_won" } else { "state_lost" });
+
+            if completed {
+                show_all_mines_widget.label_mines_left.set_label("0");
+            }
         };
 
         let check_if_completed_widget = self.widget.clone();

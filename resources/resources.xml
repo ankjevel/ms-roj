@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
   <gresource prefix="/resources">
-    <file>icons/1F4A3_color.png</file>
-    <file>icons/1F525_color.png</file>
+    <file>icons/mine.png</file>
     <file>icons/1F600_color.png</file>
     <file>icons/1F635_color.png</file>
     <file>icons/1F973_color.png</file>
-    <file>icons/E091_color.png</file>
+    <file>icons/flag.png</file>
     <file>style.css</file>
   </gresource>
 </gresources>
