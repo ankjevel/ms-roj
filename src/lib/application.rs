@@ -24,7 +24,9 @@ impl Application {
         app.bind_menubar(tx.clone());
         app.setup_labels_and_reset(tx.clone());
         app.bind_clock(tx.clone());
-        app.bind_click_events(tx.clone())
+        app.bind_click_events(tx.clone());
+
+        app
     }
 
     fn bind_menubar(&self, tx: glib::Sender<Message>) {
@@ -299,9 +301,9 @@ impl Application {
         });
     }
 
-    fn bind_click_events(self, tx: glib::Sender<Message>) -> Self {
+    fn bind_click_events(&self, tx: glib::Sender<Message>) {
         let widget = self.widget.clone();
-        let mine_event = tx.clone();
+        let tx = tx.clone();
         let mines = widget.mines.clone();
 
         mines.iter().for_each(|(position, block)| {
@@ -332,8 +334,6 @@ impl Application {
                 send.send(msg.clone()).expect("couldn't send");
             });
         });
-
-        self
     }
 
     fn setup_labels_and_reset(&self, tx: glib::Sender<Message>) {

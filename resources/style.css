@@ -20,7 +20,7 @@ button {
 }
 
 .main_widget {
-  background-color: #1E242A;
+  background-color: #1F1E28;
   border: 6px solid #494f55;
   border-right-color: #14191D;
   border-bottom-color: #14191D;
@@ -61,16 +61,14 @@ button {
   font-weight: 100;
   margin: 0;
   padding: 0 4px;
-
   text-shadow: #f04f4f 0 0 10px;
-
   border: 1px solid #14191D;
   border-right-color: #494f55;
   border-bottom-color: #494f55;
 }
 
 .mines {
-  background-color: #1E242A;
+  background-color: #1F1E28;
   border: 6px solid #14191D;
   border-right-color: #494f55;
   border-bottom-color: #494f55;
