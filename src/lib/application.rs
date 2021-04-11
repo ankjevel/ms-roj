@@ -1,6 +1,6 @@
-use crate::{
-    lib::{flood, game::Game, message::Message, position::Position, ui::build_ui, widget::Widget},
-    MINES,
+use crate::lib::{
+    flood, game::Game, gen_mine_grid::gen_mine_grid, message::Message, position::Position,
+    ui::build_ui, widget::Widget,
 };
 use gtk::prelude::*;
 use std::{cell::RefCell, rc::Rc};
@@ -8,6 +8,33 @@ use std::{cell::RefCell, rc::Rc};
 pub struct Application {
     pub widget: Rc<Widget>,
     game: Rc<RefCell<Game>>,
+}
+
+macro_rules! bind_game_resize {
+    ($tx:expr, $widget:expr, $game:expr, $action:expr, $size:expr) => {
+        if let Some(action) = $widget.menu_bar_actions.get($action) {
+            let tx = $tx.clone();
+            let widget = $widget.clone();
+            let game = $game.clone();
+            action.connect_activate(glib::clone!(@weak widget, @strong game => move |_, _| {
+                let game = game.clone();
+                let window = &widget.window;
+
+                if game.borrow().size == $size {
+                    return;
+                }
+
+                if let Ok(mut game) = game.try_borrow_mut() {
+                    game.size = $size;
+                    gen_mine_grid(&widget, tx.clone(), $size);
+
+                    window.resize(100, 100);
+
+                    tx.send(Message::Reset).expect("could not reset");
+                };
+            }));
+        }
+    };
 }
 
 impl Application {
@@ -24,7 +51,8 @@ impl Application {
         app.bind_menubar(tx.clone());
         app.setup_labels_and_reset(tx.clone());
         app.bind_clock(tx.clone());
-        app.bind_click_events(tx.clone());
+
+        gen_mine_grid(&app.widget.clone(), tx.clone(), 9);
 
         app
     }
@@ -32,6 +60,8 @@ impl Application {
     fn bind_menubar(&self, tx: glib::Sender<Message>) {
         let widget = self.widget.clone();
         let window = &widget.window;
+        let mut w_mines = &widget.mines.clone();
+        let w_mines_grid = &widget.mines_grid;
 
         if let Some(quit) = widget.menu_bar_actions.get("quit") {
             quit.connect_activate(glib::clone!(@weak window => move |_, _| {
@@ -39,10 +69,17 @@ impl Application {
             }));
         }
 
+        let new_game_tx = tx.clone();
         if let Some(new_game) = widget.menu_bar_actions.get("new_game") {
             new_game.connect_activate(glib::clone!(@weak window => move |_, _| {
-                tx.send(Message::Reset).expect("could not reset");
+                new_game_tx.send(Message::Reset).expect("could not reset");
             }));
+        }
+
+        {
+            bind_game_resize!(tx, widget, self.game, "game_1", 9);
+            bind_game_resize!(tx, widget, self.game, "game_2", 14);
+            bind_game_resize!(tx, widget, self.game, "game_3", 19);
         }
     }
 
@@ -86,7 +123,7 @@ impl Application {
                     continue;
                 }
 
-                if let Some(block) = show_all_mines_widget.mines.get(&position) {
+                if let Some(block) = widget.mines.borrow_mut().get(&position) {
                     let button = &block.0;
                     let ctx = button.get_style_context();
 
@@ -104,24 +141,24 @@ impl Application {
                 }
             }
 
-            show_all_mines_widget
+            widget
                 .button_reset
                 .get_style_context()
                 .add_class(if completed { "state_won" } else { "state_lost" });
 
             if completed {
-                show_all_mines_widget.label_mines_left.set_label("0");
+                widget.label_mines_left.set_label("0");
             }
         };
 
         let check_if_completed_widget = self.widget.clone();
         let check_if_completed_game = self.game.clone();
         let check_if_completed = move || -> bool {
-            let check_if_completed_game = check_if_completed_game.clone();
+            let game = check_if_completed_game.clone();
             let widget = check_if_completed_widget.clone();
             let completed: bool;
             {
-                let game = check_if_completed_game.borrow();
+                let game = game.borrow();
                 let mines = game
                     .field
                     .iter()
@@ -144,11 +181,11 @@ impl Application {
                         }
                     })
                     .collect::<Vec<&Position>>();
-                completed = mines.len() == *MINES as usize && mines.len() == left.len();
+                completed = mines.len() == game.mines.len() && mines.len() == left.len();
             }
 
             if completed {
-                let mut game = check_if_completed_game.borrow_mut();
+                let mut game = game.borrow_mut();
                 game.ended = true;
                 game.active = false;
             }
@@ -159,23 +196,27 @@ impl Application {
         let widget = self.widget.clone();
         let game = self.game.clone();
 
-        let flood_widget = self.widget.clone();
-        let flood_game = self.game.clone();
         rx.attach(None, move |msg| {
             match msg {
                 Message::Reset => {
                     let ctx = widget.button_reset.get_style_context();
                     clear_classes!(ctx, "state_");
-                    widget.label_time.set_label("0:00");
-                    widget.label_mines_left.set_label(&format!("{}", *MINES));
                     game.borrow_mut().new_mines();
+                    widget.label_time.set_label("0:00");
+                    widget
+                        .label_mines_left
+                        .set_label(&format!("{}", game.borrow().mines.len()));
 
-                    widget.mines.iter().for_each(|(position, block)| {
-                        let button = &block.0;
-                        button.set_label(" ");
-                        button.set_can_focus(true);
-                        clear_classes!(button.get_style_context(), "btn_");
-                    });
+                    widget
+                        .mines
+                        .borrow_mut()
+                        .iter()
+                        .for_each(|(position, block)| {
+                            let button = &block.0;
+                            button.set_label(" ");
+                            button.set_can_focus(true);
+                            clear_classes!(button.get_style_context(), "btn_");
+                        });
                 }
                 Message::End => {
                     let mut game = game.borrow_mut();
@@ -186,9 +227,13 @@ impl Application {
                     clear_classes!(ctx, "state_");
                     ctx.add_class("state_won");
                     widget.label_mines_left.set_label(&"0");
-                    widget.mines.iter().for_each(|(position, block)| {
-                        block.0.set_can_focus(false);
-                    });
+                    widget
+                        .mines
+                        .borrow_mut()
+                        .iter()
+                        .for_each(|(position, block)| {
+                            block.0.set_can_focus(false);
+                        });
                 }
                 Message::UpdateButton(position, block, flag) => {
                     let button = block.0;
@@ -285,7 +330,7 @@ impl Application {
                     }
 
                     if empty {
-                        flood(flood_widget.clone(), flood_game.clone(), &position);
+                        flood(widget.clone(), game.clone(), &position);
                     } else if game_ended {
                         show_all_mines(false);
                     } else if check_if_completed() {
@@ -301,46 +346,14 @@ impl Application {
         });
     }
 
-    fn bind_click_events(&self, tx: glib::Sender<Message>) {
-        let widget = self.widget.clone();
-        let tx = tx.clone();
-        let mines = widget.mines.clone();
-
-        mines.iter().for_each(|(position, block)| {
-            let send = tx.clone();
-            let msg = Message::UpdateButton(position.clone(), block.clone(), true);
-            block.0.connect_button_release_event(move |_, event| {
-                match event.get_button() {
-                    3 => send.send(msg.clone()).expect("couldn't send"),
-                    _ => {}
-                };
-                Inhibit(false)
-            });
-
-            let send = tx.clone();
-            let msg = Message::UpdateButton(position.clone(), block.clone(), true);
-            block.0.connect_key_press_event(move |_, key| {
-                match key.get_hardware_keycode() {
-                    102 => send.send(msg.clone()).expect("couldn't send"),
-                    _ => {}
-                }
-
-                Inhibit(false)
-            });
-
-            let send = tx.clone();
-            let msg = Message::UpdateButton(position.clone(), block.clone(), false);
-            block.0.connect_clicked(move |_| {
-                send.send(msg.clone()).expect("couldn't send");
-            });
-        });
-    }
-
     fn setup_labels_and_reset(&self, tx: glib::Sender<Message>) {
         let widget = self.widget.clone();
+        let game = self.game.clone();
 
         widget.label_time.set_label("0:00");
-        widget.label_mines_left.set_label(&format!("{}", *MINES));
+        widget
+            .label_mines_left
+            .set_label(&format!("{}", game.borrow().mines.len()));
 
         widget
             .button_reset

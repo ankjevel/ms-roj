@@ -1,9 +1,6 @@
 #![feature(label_break_value)]
 #![allow(unused_variables, unused_mut, dead_code)]
 
-#[macro_use]
-extern crate lazy_static;
-
 macro_rules! clear_classes {
     ($style_context:expr, $class:expr) => {
         for class_name in $style_context.list_classes() {
@@ -19,12 +16,6 @@ extern crate gio;
 extern crate glib;
 extern crate gtk;
 extern crate rand;
-
-lazy_static! {
-    static ref COLS: u16 = 9;
-    static ref ROWS: u16 = 9;
-    static ref MINES: u16 = 10;
-}
 
 mod lib;
 

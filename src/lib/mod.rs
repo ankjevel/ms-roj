@@ -1,6 +1,7 @@
 pub mod application;
 pub mod block;
 pub mod game;
+pub mod gen_mine_grid;
 pub mod message;
 pub mod position;
 pub mod ui;
@@ -13,21 +14,26 @@ use crate::{
         widget::Widget,
     },
     rand::Rng,
-    COLS, MINES, ROWS,
 };
 
 use gtk::prelude::*;
-use std::{cell::RefCell, collections::HashSet, rc::Rc};
+use std::{cell::RefCell, collections::HashSet, mem, rc::Rc};
 
-pub fn gen_mines() -> Vec<Position> {
+pub fn gen_mines(size: u16) -> Vec<Position> {
     let mine = || -> Position {
         let mut rng = rand::thread_rng();
-        Position(rng.gen_range(0, *ROWS - 1), rng.gen_range(0, *COLS - 1))
+        Position(rng.gen_range(0, size - 1), rng.gen_range(0, size - 1))
     };
 
     let mut mines = vec![];
 
-    while mines.len() < *MINES as usize {
+    let mut total_mines = size + 1;
+
+    if total_mines > 10 {
+        total_mines = 10 + ((total_mines - 10) * 3);
+    }
+
+    while mines.len() < total_mines as usize {
         let mine = mine();
         if mines.contains(&mine) {
             continue;
@@ -38,104 +44,61 @@ pub fn gen_mines() -> Vec<Position> {
     mines
 }
 
-fn get_adjecent(
-    pos: &Position,
-    field: &FieldMap,
-    collected: &HashSet<Position>,
-) -> Vec<(Position, Field)> {
-    let mut vec: Vec<(isize, isize)> = vec![(1, 0), (0, 1)];
-
-    if pos.0 > 0 {
-        vec.push((-1, 0));
-    }
-
-    if pos.1 > 0 {
-        vec.push((0, -1));
-    }
-
-    vec.into_iter()
-        .filter_map(|(x, y)| {
-            let (x, y) = ((pos.0 as isize + x) as u16, (pos.1 as isize + y) as u16);
-            let tile = Position(x, y);
-            let res = field.get(&tile);
-
-            if res.is_none() {
-                None
-            } else {
-                let tile = tile.to_owned();
-                let block = res.unwrap().to_owned();
-
-                if collected.contains(&tile) {
-                    None
-                } else {
-                    Some((tile, block))
-                }
-            }
-        })
-        .collect()
-}
-
-pub fn get_tiles_around(
-    pos: &Position,
-    block: &Field,
-    field_map: &FieldMap,
-) -> Vec<(Position, Field)> {
+pub fn get_tiles_around(pos: &Position, block: &Field, field_map: &FieldMap) -> HashSet<Position> {
+    let mut around: HashSet<Position> = HashSet::new();
     if block.mines_around != 0 {
-        return vec![];
+        return around;
     }
 
-    let mut found = vec![];
-    let mut ignore = HashSet::new();
-    let mut check_from = vec![pos.to_owned()];
+    let mut adj = vec![block.to_owned()];
+    let mut checked = HashSet::new();
     loop {
-        let adj = check_from
-            .iter()
-            .filter_map(|tile| {
-                let adj = get_adjecent(&tile, &field_map, &ignore);
+        let mut new_adj = vec![];
+        adj.iter().for_each(|field| {
+            if checked.contains(field) {
+                return;
+            }
+            checked.insert(field.to_owned());
 
-                if adj.is_empty() {
-                    None
-                } else {
-                    Some(adj.to_owned())
+            if field.is_mine || field.mines_around != 0 {
+                return;
+            }
+
+            &field.adjecent_empty.iter().for_each(|pos| {
+                if around.contains(&pos) {
+                    return;
                 }
-            })
-            .flat_map(|adj| adj.to_owned())
-            .collect::<Vec<(Position, Field)>>();
 
-        check_from = adj
-            .iter()
-            .filter_map(|(tile, block)| {
-                if block.mines_around == 0 {
-                    Some(tile.to_owned())
-                } else {
-                    None
+                around.insert(pos.to_owned());
+                if let Some(field) = field_map.get(pos) {
+                    if !field.is_mine || field.mines_around == 0 {
+                        new_adj.push(field.to_owned());
+                    }
                 }
-            })
-            .collect();
+            });
+        });
 
-        if adj.len() == 0 {
+        if new_adj.is_empty() {
             break;
         }
 
-        for (tile, _block) in &adj {
-            ignore.insert(tile.to_owned());
-        }
-
-        found.extend(adj);
+        let _ = mem::replace(&mut adj, new_adj);
     }
 
-    found
+    around
 }
 
 fn flood(flood_widget: Rc<Widget>, flood_game: Rc<RefCell<Game>>, position: &Position) {
-    let mut positions = Vec::new();
+    let mut positions: HashSet<Position> = HashSet::new();
+
     {
         let game = flood_game.borrow();
         if let Some(field) = game.field.get(&position) {
             let field_ref = game.field.to_owned();
-            let positions = get_tiles_around(&position, &field, &field_ref)
-                .iter()
-                .for_each(|(position, _)| positions.push(position.to_owned()));
+            let _ = mem::replace(
+                &mut positions,
+                get_tiles_around(&position, &field, &field_ref),
+            );
         }
     }
 
@@ -144,8 +107,10 @@ fn flood(flood_widget: Rc<Widget>, flood_game: Rc<RefCell<Game>>, position: &Pos
     }
 
     let mut game = flood_game.borrow_mut();
+    let mut mines_modified = 0;
     for position in positions {
         let (mut label, mut class_names) = (" ".to_string(), vec![]);
+
         if let Some(field) = game.field.get_mut(&position) {
             field.is_clicked = true;
 
@@ -158,29 +123,34 @@ fn flood(flood_widget: Rc<Widget>, flood_game: Rc<RefCell<Game>>, position: &Pos
             }
         }
 
-        if let Some(block) = flood_widget.mines.get(&Position(position.0, position.1)) {
+        if let Some(block) = flood_widget
+            .mines
+            .borrow_mut()
+            .get(&Position(position.0, position.1))
+        {
             let button = &block.0;
             button.set_label(&label);
             button.set_can_focus(false);
             let ctx = button.get_style_context();
 
             if ctx.has_class("btn_flag") {
-                let mut mines: i16 = flood_widget
-                    .label_mines_left
-                    .get_label()
-                    .parse()
-                    .unwrap_or(0);
-
-                mines += 1;
-
-                flood_widget.label_mines_left.set_label(&mines.to_string());
+                mines_modified += 1;
             }
 
             clear_classes!(ctx, "btn_");
-
             for class in class_names {
                 ctx.add_class(&class);
             }
         }
+    }
+
+    if mines_modified != 0 {
+        let mut mines: i16 = flood_widget
+            .label_mines_left
+            .get_label()
+            .parse()
+            .unwrap_or(0);
+        mines += mines_modified;
+        flood_widget.label_mines_left.set_label(&mines.to_string());
     }
 }

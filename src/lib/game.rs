@@ -1,18 +1,15 @@
-use crate::{
-    lib::{gen_mines, position::Position},
-    COLS, ROWS,
-};
+use crate::lib::{gen_mines, position::Position};
 use std::{collections::HashMap, time::Instant};
 
 pub type FieldMap = HashMap<Position, Field>;
 
-fn gen() -> (Vec<Position>, FieldMap) {
-    let mines = gen_mines();
+fn gen(size: u16) -> (Vec<Position>, FieldMap) {
+    let mines = gen_mines(size);
 
     let mut field = HashMap::new();
 
-    for x in 0..*ROWS {
-        for y in 0..*COLS {
+    for x in 0..size {
+        for y in 0..size {
             let pos = Position(x, y);
             let is_mine = mines.contains(&pos);
             field.insert(
@@ -22,6 +19,7 @@ fn gen() -> (Vec<Position>, FieldMap) {
                     is_clicked: false,
                     is_flagged: false,
                     mines_around: around(&pos, &mines),
+                    adjecent_empty: adjecent_empty(&pos, &mines),
                 },
             );
         }
@@ -30,12 +28,13 @@ fn gen() -> (Vec<Position>, FieldMap) {
     (mines, field)
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Field {
     pub is_mine: bool,
     pub is_clicked: bool,
     pub is_flagged: bool,
     pub mines_around: u16,
+    pub adjecent_empty: Vec<Position>,
 }
 
 impl Field {
@@ -53,6 +52,7 @@ impl Field {
 }
 
 pub struct Game {
+    pub size: u16,
     pub mines: Vec<Position>,
     pub field: FieldMap,
     pub active: bool,
@@ -62,9 +62,11 @@ pub struct Game {
 
 impl Game {
     pub fn new() -> Self {
-        let (mines, field) = gen();
+        let size = 9;
+        let (mines, field) = gen(size);
 
         Self {
+            size,
             mines,
             field,
             active: false,
@@ -79,7 +81,7 @@ impl Game {
     }
 
     pub fn new_mines(&mut self) {
-        let (mines, field) = gen();
+        let (mines, field) = gen(self.size);
 
         self.mines = mines;
         self.field = field;
@@ -89,7 +91,7 @@ impl Game {
     }
 }
 
-fn around(pos: &Position, mines: &Vec<Position>) -> u16 {
+fn p_around(pos: &Position) -> Vec<(u16, u16)> {
     let (x, y) = (pos.0, pos.1);
     let mut points = vec![(x, y), (x + 1, y), (x, y + 1), (x + 1, y + 1)];
 
@@ -108,11 +110,29 @@ fn around(pos: &Position, mines: &Vec<Position>) -> u16 {
         points.push((x - 1, y + 1));
     }
 
-    points.iter().fold(0, |total, (x, y)| {
+    points
+}
+
+fn around(pos: &Position, mines: &Vec<Position>) -> u16 {
+    p_around(&pos).iter().fold(0, |total, (x, y)| {
         if mines.contains(&Position(*x, *y)) {
             total + 1
         } else {
             total
         }
     })
+}
+
+fn adjecent_empty(pos: &Position, mines: &Vec<Position>) -> Vec<Position> {
+    p_around(&pos)
+        .iter()
+        .filter_map(|(x, y)| {
+            let position = Position(*x, *y);
+            if mines.contains(&position) {
+                None
+            } else {
+                Some(position.to_owned())
+            }
+        })
+        .collect()
 }

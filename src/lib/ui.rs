@@ -1,7 +1,4 @@
-use crate::{
-    lib::{block::Block, position::Position, widget::Widget},
-    COLS, ROWS,
-};
+use crate::lib::widget::Widget;
 
 use gio::prelude::*;
 use gtk::{
@@ -9,7 +6,7 @@ use gtk::{
     StyleContext,
 };
 
-use std::{collections::HashMap, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 fn init_menu_bar_actions<'a>(
     application: &'a Application,
@@ -20,9 +17,15 @@ fn init_menu_bar_actions<'a>(
 
     menu.append(Some("New Game"), Some("app.new_game"));
     menu.append(Some("Quit"), Some("app.quit"));
+    menu.append(Some("Game 1"), Some("app.game_1"));
+    menu.append(Some("Game 2"), Some("app.game_2"));
+    menu.append(Some("Game 3"), Some("app.game_3"));
 
     application.set_accels_for_action("app.quit", &["<Primary>Q"]);
     application.set_accels_for_action("app.new_game", &["<Primary>N"]);
+    application.set_accels_for_action("app.game_1", &["<Primary>1"]);
+    application.set_accels_for_action("app.game_2", &["<Primary>2"]);
+    application.set_accels_for_action("app.game_3", &["<Primary>3"]);
     application.set_app_menu(Some(&menu));
 
     let quit = gio::SimpleAction::new("quit", None);
@@ -32,6 +35,18 @@ fn init_menu_bar_actions<'a>(
     let new_game = gio::SimpleAction::new("new_game", None);
     application.add_action(&new_game);
     menu_bar_actions.insert("new_game".to_string(), Rc::new(new_game));
+
+    let game_1 = gio::SimpleAction::new("game_1", None);
+    application.add_action(&game_1);
+    menu_bar_actions.insert("game_1".to_string(), Rc::new(game_1));
+
+    let game_2 = gio::SimpleAction::new("game_2", None);
+    application.add_action(&game_2);
+    menu_bar_actions.insert("game_2".to_string(), Rc::new(game_2));
+
+    let game_3 = gio::SimpleAction::new("game_3", None);
+    application.add_action(&game_3);
+    menu_bar_actions.insert("game_3".to_string(), Rc::new(game_3));
 
     menu_bar_actions
 }
@@ -109,24 +124,8 @@ pub fn build_ui<'a>(application: &'a Application) -> Widget {
     // #-- mines
     let mines_grid = gtk::Grid::new();
     mines_grid.get_style_context().add_class("mines");
+    mines_grid.hide_on_delete();
     let mut mines = HashMap::new();
-
-    for y in 0..*ROWS {
-        for x in 0..*COLS {
-            let mine = gtk::Button::new();
-            mine.set_label(" ");
-            mine.set_can_focus(true);
-            mine.set_focus_on_click(false);
-            mine.set_receives_default(false);
-            mine.set_border_width(0);
-            mine.set_size_request(40, 40);
-            mine.get_style_context().add_class("mine");
-            mines_grid.add(&mine);
-            mines_grid.set_cell_left_attach(&mine, y as i32);
-            mines_grid.set_cell_top_attach(&mine, x as i32);
-            mines.insert(Position(x, y), Block::new(mine));
-        }
-    }
 
     main_widget.add(&top_bar);
     main_widget.set_child_packing(&top_bar, false, true, 0, gtk::PackType::Start);
@@ -150,7 +149,8 @@ pub fn build_ui<'a>(application: &'a Application) -> Widget {
     window.show_all();
 
     Widget {
-        mines: Rc::new(mines),
+        mines: Rc::new(RefCell::new(mines)),
+        mines_grid: Rc::new(RefCell::new(mines_grid)),
         window,
         label_mines_left,
         label_time,
