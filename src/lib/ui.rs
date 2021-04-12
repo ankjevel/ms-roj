@@ -8,6 +8,14 @@ use gtk::{
 
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
+macro_rules! action {
+    ($application:expr, $menu_bar_actions:expr, $action_id:expr) => {
+        let action = gio::SimpleAction::new($action_id, None);
+        $application.add_action(&action);
+        $menu_bar_actions.insert($action_id.to_string(), Rc::new(action));
+    };
+}
+
 fn init_menu_bar_actions<'a>(
     application: &'a Application,
     window: &'a ApplicationWindow,
@@ -28,25 +36,11 @@ fn init_menu_bar_actions<'a>(
     application.set_accels_for_action("app.game_3", &["<Primary>3"]);
     application.set_app_menu(Some(&menu));
 
-    let quit = gio::SimpleAction::new("quit", None);
-    application.add_action(&quit);
-    menu_bar_actions.insert("quit".to_string(), Rc::new(quit));
-
-    let new_game = gio::SimpleAction::new("new_game", None);
-    application.add_action(&new_game);
-    menu_bar_actions.insert("new_game".to_string(), Rc::new(new_game));
-
-    let game_1 = gio::SimpleAction::new("game_1", None);
-    application.add_action(&game_1);
-    menu_bar_actions.insert("game_1".to_string(), Rc::new(game_1));
-
-    let game_2 = gio::SimpleAction::new("game_2", None);
-    application.add_action(&game_2);
-    menu_bar_actions.insert("game_2".to_string(), Rc::new(game_2));
-
-    let game_3 = gio::SimpleAction::new("game_3", None);
-    application.add_action(&game_3);
-    menu_bar_actions.insert("game_3".to_string(), Rc::new(game_3));
+    action!(application, menu_bar_actions, "quit");
+    action!(application, menu_bar_actions, "new_game");
+    action!(application, menu_bar_actions, "game_1");
+    action!(application, menu_bar_actions, "game_2");
+    action!(application, menu_bar_actions, "game_3");
 
     menu_bar_actions
 }
